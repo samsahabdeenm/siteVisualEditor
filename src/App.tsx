@@ -20,7 +20,7 @@ const runtime = `
     if (!node.hasAttribute('data-ve-id') && node.id !== '__site_visual_editor_runtime' && node.id !== '__site_visual_editor_highlight') node.setAttribute('data-ve-id', String(index + 1));
   });
   document.addEventListener('click', function (event) {
-    var node = event.target && event.target.closest ? event.target.closest('[data-ve-id]') : null;
+    var node = event.target && event.target.closest ? (event.target.closest('a, img, button, input, textarea, video, audio, source') || event.target.closest('[data-ve-id]')) : null;
     if (!node) return;
     event.preventDefault();
     event.stopPropagation();
@@ -42,10 +42,10 @@ const runtime = `
       var clone = selected.cloneNode(true); clone.removeAttribute('data-ve-selected'); clone.querySelectorAll('[data-ve-id]').forEach(function (n) { n.removeAttribute('data-ve-id'); }); selected.parentElement.insertBefore(clone, selected.nextSibling);
       parent.postMessage({ type: 've-changed' }, '*');
     }
-    if (data.type === 've-remove' && selected && selected.parentElement) { selected.remove(); selected = null; parent.postMessage({ type: 've-selected', element: null }); parent.postMessage({ type: 've-changed' }, '*'); }
+    if (data.type === 've-remove' && selected && selected.parentElement) { selected.remove(); selected = null; parent.postMessage({ type: 've-selected', element: null }); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-move-up' && selected && selected.previousElementSibling) { selected.parentElement.insertBefore(selected, selected.previousElementSibling); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-move-down' && selected && selected.nextElementSibling) { selected.parentElement.insertBefore(selected.nextElementSibling, selected); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-select-id') { var target = document.querySelector('[data-ve-id="' + String(data.id).replace(/[^0-9]/g, '') + '"]'); if (target) target.click(); }\n    if (data.type === 've-links') { parent.postMessage({ type: 've-links-result', links: Array.from(document.querySelectorAll('a[href]')).map(function (a) { return { id: a.getAttribute('data-ve-id'), text: (a.innerText || a.textContent || '').trim().slice(0, 120), href: a.getAttribute('href') || '' }; }) }, '*'); }
     if (data.type === 've-html') {
       var clone = document.documentElement.cloneNode(true);
-      clone.querySelectorAll('#__site_visual_editor_runtime, #__site_visual_editor_highlight').forEach(function (n) { n.remove(); });
+      clone.querySelectorAll('#__site_visual_editor_runtime, #__site_visual_editor_highlight, #__site_visual_editor_base').forEach(function (n) { n.remove(); });
       clone.querySelectorAll('[data-ve-id], [data-ve-selected]').forEach(function (n) { n.removeAttribute('data-ve-id'); n.removeAttribute('data-ve-selected'); });
       parent.postMessage({ type: 've-html-result', html: '<!doctype html>\\n' + clone.outerHTML }, '*');
     }
@@ -59,7 +59,7 @@ const editableExtensions = /\.(html?|css|js|jsx|ts|tsx|json|svg)$/i;
 function buildPreview(content: string, repo: RepoInfo, filePath: string) {
   let html = content;
   if (!/<html[\s>]/i.test(html)) html = `<!doctype html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
-  const base = `<base href="${rawBaseUrl(repo, filePath)}">`;
+  const base = `<base id="__site_visual_editor_base" href="${rawBaseUrl(repo, filePath)}">`;
   html = /<head[\s>]/i.test(html) ? html.replace(/<head([^>]*)>/i, match => match + base) : html.replace(/<html([^>]*)>/i, match => match + '<head>' + base + '</head>');
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, runtime + '</body>') : html + runtime;
 }
@@ -80,7 +80,7 @@ export default function App() {
   const [currentFile, setCurrentFile] = useState<LoadedFile | null>(null);
   const [originalFile, setOriginalFile] = useState<LoadedFile | null>(null);
   const [frameHtml, setFrameHtml] = useState("");
-  const [selected, setSelected] = useState<SelectedElement>(emptyElement);
+  const [selected, setSelected] = useState<SelectedElement>(emptyElement);\n  const [showLinks, setShowLinks] = useState(false);\n  const [linkInventory, setLinkInventory] = useState<Array<{id: string; text: string; href: string}>>([]);
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<Notice>({ kind: "info", text: "Connect a repository to start editing existing pages." });
@@ -104,7 +104,7 @@ export default function App() {
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== frameRef.current?.contentWindow) return;
-      if (event.data?.type === "ve-selected") setSelected(event.data.element || emptyElement);
+      if (event.data?.type === "ve-selected") setSelected(event.data.element || emptyElement);\n      if (event.data?.type === "ve-links-result") setLinkInventory(event.data.links || []);
       if (event.data?.type === "ve-changed") { setDirty(true); setNotice({ kind: "info", text: "Preview changed. Save a draft or commit to Git to keep it." }); }
       if (event.data?.type === "ve-html-result" && htmlResultResolve.current) {
         htmlResultResolve.current(event.data.html);
@@ -238,7 +238,7 @@ export default function App() {
 
   function downloadHtml() {
     if (!currentFile) return;
-    const content = currentFile.path.endsWith(".html") ? requestEditedHtml() : Promise.resolve(currentFile.content);
+    const content = /\\.html?$/i.test(currentFile.path) ? requestEditedHtml() : Promise.resolve(currentFile.content);
     content.then(value => {
       const url = URL.createObjectURL(new Blob([value], { type: "text/html;charset=utf-8" }));
       const anchor = document.createElement("a"); anchor.href = url; anchor.download = currentFile.path.split("/").pop() || "page.html"; anchor.click(); URL.revokeObjectURL(url);
@@ -280,7 +280,7 @@ export default function App() {
         <section className="editor-main">
           <div className="editor-toolbar">
             <div className="breadcrumbs"><span>Pages</span><span>›</span><b>{currentFile?.path || "Choose a page"}</b>{dirty && <span className="unsaved-dot" title="Unsaved changes" />}</div>
-            <div className="toolbar-controls"><div className="viewport-switch"><button className={viewport === "desktop" ? "active" : ""} onClick={() => setViewport("desktop")} title="Desktop preview">▰</button><button className={viewport === "tablet" ? "active" : ""} onClick={() => setViewport("tablet")} title="Tablet preview">▯</button><button className={viewport === "mobile" ? "active" : ""} onClick={() => setViewport("mobile")} title="Mobile preview">▯</button></div><button className="button subtle small" onClick={downloadHtml} disabled={!currentFile}>↓ Export</button></div>
+            <div className="toolbar-controls"><div className="viewport-switch"><button className={viewport === "desktop" ? "active" : ""} onClick={() => setViewport("desktop")} title="Desktop preview">▰</button><button className={viewport === "tablet" ? "active" : ""} onClick={() => setViewport("tablet")} title="Tablet preview">▯</button><button className={viewport === "mobile" ? "active" : ""} onClick={() => setViewport("mobile")} title="Mobile preview">▯</button></div><button className="button subtle small" onClick={() => { setShowLinks(true); frameRef.current?.contentWindow?.postMessage({ type: "ve-links" }, "*"); }} disabled={!previewSrc}>↗ Find links</button><button className="button subtle small" onClick={downloadHtml} disabled={!currentFile}>↓ Export</button></div>
           </div>
           <div className="canvas-area">
             {previewSrc ? <div className={`preview-device ${viewport}`}><div className="preview-browser"><div className="browser-dots"><i/><i/><i/></div><div className="browser-url">{repo?.owner}/{repo?.name}/{currentFile?.path}</div><span className="browser-lock">⌁</span></div><iframe ref={frameRef} title="Isolated website preview" className="preview-frame" sandbox="allow-scripts allow-forms allow-popups" srcDoc={previewSrc} /></div>
@@ -298,7 +298,7 @@ export default function App() {
                 {["a","img","source","video","audio"].includes(selected.tag) && <><label htmlFor="prop-link">{selected.tag === "img" ? "Image source URL" : "Link / source URL"}</label><input id="prop-link" value={selected.tag === "img" ? selected.src : selected.href} onChange={e => applyPatch(selected.tag === "img" ? { src: e.target.value } : { href: e.target.value })} placeholder="https://…" />{selected.tag === "img" && <><label htmlFor="prop-alt">Alternative text</label><input id="prop-alt" value={selected.alt} onChange={e => applyPatch({ alt: e.target.value })} /></>}</>}
               </section>
               <section className="property-section"><h4>APPEARANCE</h4><div className="field-row"><div><label htmlFor="prop-color">Text color</label><input id="prop-color" value={selected.color} onChange={e => applyPatch({ color: e.target.value })} placeholder="#222 or CSS" /></div><div><label htmlFor="prop-bg">Background</label><input id="prop-bg" value={selected.backgroundColor} onChange={e => applyPatch({ backgroundColor: e.target.value })} placeholder="#fff or CSS" /></div></div><div className="field-row"><div><label htmlFor="prop-font">Font size</label><input id="prop-font" value={selected.fontSize} onChange={e => applyPatch({ fontSize: e.target.value })} placeholder="16px" /></div><div><label htmlFor="prop-width">Width</label><input id="prop-width" value={selected.width} onChange={e => applyPatch({ width: e.target.value })} placeholder="100% / auto" /></div></div><div className="field-row"><div><label htmlFor="prop-margin">Margin</label><input id="prop-margin" value={selected.margin} onChange={e => applyPatch({ margin: e.target.value })} placeholder="16px 0" /></div><div><label htmlFor="prop-padding">Padding</label><input id="prop-padding" value={selected.padding} onChange={e => applyPatch({ padding: e.target.value })} placeholder="12px" /></div></div><label htmlFor="prop-align">Text alignment</label><select id="prop-align" value={selected.textAlign} onChange={e => applyPatch({ textAlign: e.target.value })}><option value="">Theme default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></section>
-              <section className="property-section"><h4>SECTION ACTIONS</h4><p className="helper">These actions affect the selected element and its nested content.</p><div className="action-row"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-duplicate" }, "*"); setDirty(true); }}>▢ Clone</button><button className="button danger" onClick={() => { if (window.confirm("Remove this element from the page preview? This change is not committed until you save it.")) { frameRef.current?.contentWindow?.postMessage({ type: "ve-remove" }, "*"); setSelected(emptyElement); setDirty(true); } }}>⌫ Remove</button></div></section>
+              <section className="property-section"><h4>SECTION ACTIONS</h4><p className="helper">These actions affect the selected element and its nested content.</p><div className="action-row"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-up" }, "*"); setDirty(true); }}>↑ Move up</button><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-down" }, "*"); setDirty(true); }}>↓ Move down</button></div><div className="action-row section-actions"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-duplicate" }, "*"); setDirty(true); }}>▢ Clone</button><button className="button danger" onClick={() => { if (window.confirm("Remove this element from the page preview? This change is not committed until you save it.")) { frameRef.current?.contentWindow?.postMessage({ type: "ve-remove" }, "*"); setSelected(emptyElement); setDirty(true); } }}>⌫ Remove</button></div></section>
             </>}
             <div className="panel-save"><button className="button primary full" disabled={loading || !currentFile || !user} onClick={saveDraft}>{loading ? "Saving…" : "▣ Save draft to database"}</button><small>{user ? "Saves a version snapshot to your private workspace." : "Sign in below to enable database drafts."}</small><button className="button subtle full" disabled={loading || !currentFile} onClick={saveToGit}>↥ Commit changes to Git</button></div>
           </div>
