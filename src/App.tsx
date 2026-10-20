@@ -183,7 +183,6 @@ export default function App() {
     if (!repo || !currentFile) return setNotice({ kind: "error", text: "Connect a repository and open an HTML page first." });
     if (!user) return setNotice({ kind: "error", text: "Sign in with your account to save drafts to the database." });
     setLoading(true);
-    let gitCommitted = false;
     try {
       const content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
       let projectId = savedProjectId;
@@ -207,6 +206,7 @@ export default function App() {
   async function saveToGit() {
     if (!repo || !currentFile || !originalFile) return setNotice({ kind: "error", text: "Connect a repository and open an HTML page first." });
     setLoading(true);
+    let gitCommitted = false;
     try {
       const content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
       if (content === originalFile.content) {
