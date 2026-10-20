@@ -266,7 +266,7 @@ export default function App() {
           setSavedProjectId(created.id);
         }
       }
-      if (!repo || repo.provider !== parsed.provider || repo.owner !== parsed.owner || repo.name !== parsed.name) setSavedProjectId(null);
+      if (!user && (!repo || repo.provider !== parsed.provider || repo.owner !== parsed.owner || repo.name !== parsed.name)) setSavedProjectId(null);
       setRepo(parsed);
       setFiles(list);
       setCurrentFile(null);
