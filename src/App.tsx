@@ -129,6 +129,7 @@ export default function App() {
       const parsed = parseRepositoryUrl(repoUrl, branch, root);
       if (parsed.provider !== provider) setProvider(parsed.provider);
       const list = await listRepositoryFiles(parsed, token.trim());
+      if (!repo || repo.provider !== parsed.provider || repo.owner !== parsed.owner || repo.name !== parsed.name) setSavedProjectId(null);
       setRepo(parsed);
       setFiles(list);
       setCurrentFile(null);
@@ -215,9 +216,31 @@ export default function App() {
       const result = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
       const updated = { ...currentFile, content, sha: result.fileSha };
       setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
-      if (user && savedProjectId) {
-        await supabase.from("visual_editor_projects").update({ last_commit_sha: result.commitSha || null, updated_at: new Date().toISOString() }).eq("id", savedProjectId);
-        await supabase.from("visual_editor_revisions").insert({ project_id: savedProjectId, owner_id: user.id, label: `Commit · ${currentFile.path}`, status: "committed", snapshot: { path: currentFile.path, content, savedAt: new Date().toISOString() }, changed_files: [currentFile.path], commit_sha: result.commitSha || null });
+      if (user) {
+        let projectId = savedProjectId;
+        if (!projectId) {
+          const { data, error } = await supabase.from("visual_editor_projects").insert({
+            owner_id: user.id,
+            name: `${repo.owner}/${repo.name}`,
+            provider: repo.provider,
+            repository_owner: repo.owner,
+            repository_name: repo.name,
+            default_branch: repo.branch,
+            project_root: repo.root || "/",
+            framework: inferFramework(files),
+            settings: { lastOpenedFile: currentFile.path, editor: "visual" },
+            last_commit_sha: result.commitSha || null,
+            updated_at: new Date().toISOString()
+          }).select("id").single();
+          if (error) throw error;
+          projectId = data.id;
+          setSavedProjectId(projectId);
+        } else {
+          const { error } = await supabase.from("visual_editor_projects").update({ last_commit_sha: result.commitSha || null, updated_at: new Date().toISOString() }).eq("id", projectId);
+          if (error) throw error;
+        }
+        const { error: revisionError } = await supabase.from("visual_editor_revisions").insert({ project_id: projectId, owner_id: user.id, label: `Commit · ${currentFile.path}`, status: "committed", snapshot: { path: currentFile.path, content, savedAt: new Date().toISOString() }, changed_files: [currentFile.path], commit_sha: result.commitSha || null });
+        if (revisionError) throw revisionError;
       }
       setNotice({ kind: "ok", text: `Committed ${currentFile.path} to ${repo.branch}.${result.commitSha ? ` Commit: ${result.commitSha.slice(0, 8)}` : ""}` });
     } catch (error) {
