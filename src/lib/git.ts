@@ -57,7 +57,7 @@ async function checkedFetch(url: string, init: RequestInit) {
 
 export async function listRepositoryFiles(repo: RepoInfo, token: string): Promise<RepoFile[]> {
   if (repo.provider === "github") {
-    const response = await checkedFetch(`${apiRoot(repo)}/git/trees/${encodeURIComponent(repo.branch)}?recursive=1`, { headers: headers(repo, token) });
+    const response = await checkedFetch(`${apiRoot(repo)}/git/trees/${repo.branch.split("/").map(encodeURIComponent).join("/")}?recursive=1`, { headers: headers(repo, token) });
     const data = await response.json();
     if (data.truncated) throw new Error("This repository tree is too large for one scan. Narrow the project folder or scan support can be extended.");
     return (data.tree || [])
@@ -114,7 +114,7 @@ export async function commitRepositoryFile(repo: RepoInfo, token: string, file: 
       body: JSON.stringify({ message, content: toBase64Utf8(file.content), branch: repo.branch, ...(file.sha ? { sha: file.sha } : {}) })
     });
     const data = await response.json();
-    return data.commit?.sha as string | undefined;
+    return { commitSha: data.commit?.sha as string | undefined, fileSha: data.content?.sha as string | undefined };
   }
   const response = await checkedFetch(`${apiRoot(repo)}/repository/files/${encodeURIComponent(file.path)}`, {
     method: "PUT",
@@ -122,7 +122,7 @@ export async function commitRepositoryFile(repo: RepoInfo, token: string, file: 
     body: JSON.stringify({ branch: repo.branch, content: file.content, commit_message: message, encoding: "text" })
   });
   const data = await response.json();
-  return data.commit_id as string | undefined;
+  return { commitSha: data.commit_id as string | undefined, fileSha: undefined };
 }
 
 export function rawBaseUrl(repo: RepoInfo, filePath: string) {
