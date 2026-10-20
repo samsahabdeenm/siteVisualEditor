@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "./lib/supabase";
-import { commitRepositoryFile, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
-import type { GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
+import { commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
+import type { AccessibleRepository, GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
 import { detectFramework } from "./lib/frameworkAdapters";
 
 type SelectedElement = { id: string; tag: string; text: string; href: string; src: string; alt: string; color: string; backgroundColor: string; fontSize: string; margin: string; padding: string; width: string; textAlign: string };
@@ -74,6 +74,7 @@ export default function App() {
   const [branch, setBranch] = useState("main");
   const [root, setRoot] = useState("");
   const [token, setToken] = useState("");
+  const [accessibleRepos, setAccessibleRepos] = useState<AccessibleRepository[]>([]);
   const [repo, setRepo] = useState<RepoInfo | null>(null);
   const [files, setFiles] = useState<RepoFile[]>([]);
   const [filter, setFilter] = useState("");
@@ -98,9 +99,28 @@ export default function App() {
   const htmlResultResolve = useRef<((html: string) => void) | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user || null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
-    return () => listener.subscription.unsubscribe();
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setUser(data.session?.user || null);
+      const session = data.session as (typeof data.session & { provider_token?: string | null }) | null;
+      if (session?.provider_token) {
+        setToken(session.provider_token);
+        setProvider(session.user?.app_metadata?.provider === "gitlab" ? "gitlab" : "github");
+      }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      const providerSession = session as (typeof session & { provider_token?: string | null }) | null;
+      if (providerSession?.provider_token) {
+        setToken(providerSession.provider_token);
+        setProvider(session?.user?.app_metadata?.provider === "gitlab" ? "gitlab" : "github");
+      } else if (!session) {
+        setToken("");
+        setAccessibleRepos([]);
+      }
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -137,8 +157,47 @@ export default function App() {
   const previewSrc = useMemo(() => frameHtml, [frameHtml]);
   const visibleFiles = useMemo(() => files.filter(file => editableExtensions.test(file.path) && file.path.toLowerCase().includes(filter.toLowerCase())), [files, filter]);
 
+  async function connectGitProvider(target: GitProvider) {
+    setProvider(target);
+    setAuthBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: target === "github" ? "github" : "gitlab",
+        options: {
+          scopes: target === "github" ? "repo" : "api read_repository write_repository",
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Git provider sign-in failed. Check that this OAuth provider is enabled in Supabase Auth." });
+    } finally { setAuthBusy(false); }
+  }
+
+  async function loadAccessibleRepositories() {
+    if (!token.trim()) return setNotice({ kind: "error", text: "Connect GitHub or GitLab first, or paste an access token." });
+    setLoading(true);
+    try {
+      const items = await listAccessibleRepositories(provider, token.trim());
+      setAccessibleRepos(items);
+      setNotice({ kind: "ok", text: "Loaded " + items.length + " repositories accessible to this " + (provider === "github" ? "GitHub" : "GitLab") + " account." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not load accessible repositories." });
+    } finally { setLoading(false); }
+  }
+
+  function chooseAccessibleRepository(label: string) {
+    const item = accessibleRepos.find(candidate => candidate.label === label);
+    if (!item) return;
+    setRepoUrl(item.url);
+    setBranch(item.defaultBranch);
+    setProvider(item.provider);
+    setRoot("");
+  }
+
   async function connectRepository(event: FormEvent) {
     event.preventDefault();
+    if (!token.trim()) return setNotice({ kind: "error", text: "Connect your Git provider or enter an access token to read this repository." });
     setLoading(true);
     setNotice({ kind: "info", text: "Scanning repository files…" });
     try {
@@ -315,7 +374,7 @@ export default function App() {
         <a className="brand" href="#" aria-label="Site Visual Editor home"><span className="brand-mark">SV</span><span>site<span className="brand-light">visual</span><small>GIT WORKSPACE</small></span></a>
         <div className="topbar-center"><span className="status-dot" /> Existing website editor <span className="topbar-separator">/</span> <span className="muted">{repo ? `${repo.owner}/${repo.name}` : "No repository connected"}</span></div>
         <div className="topbar-actions">
-          {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={() => supabase.auth.signOut()}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
+          {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={async () => { await supabase.auth.signOut(); setToken(""); setAccessibleRepos([]); }}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
           <button className="button primary small" disabled={loading || !currentFile} onClick={saveToGit}>{loading ? "Working…" : "↥ Commit to Git"}</button>
         </div>
       </header>
@@ -325,11 +384,12 @@ export default function App() {
           <div className="rail-heading"><span>PROJECT</span><button className="icon-button" title="Connect another repository" onClick={() => setShowConnect(!showConnect)}>＋</button></div>
           {showConnect && <form className="connect-form" onSubmit={connectRepository}>
             <label>Git provider</label>
-            <div className="segmented"><button type="button" className={provider === "github" ? "active" : ""} onClick={() => { setProvider("github"); if (repoUrl.includes("gitlab")) setRepoUrl(""); }}>GitHub</button><button type="button" className={provider === "gitlab" ? "active" : ""} onClick={() => { setProvider("gitlab"); if (repoUrl.includes("github")) setRepoUrl(""); }}>GitLab</button></div>
+            <div className="segmented"><button type="button" className={provider === "github" ? "active" : ""} onClick={() => { setProvider("github"); setAccessibleRepos([]); if (repoUrl.includes("gitlab")) setRepoUrl(""); }}>GitHub</button><button type="button" className={provider === "gitlab" ? "active" : ""} onClick={() => { setProvider("gitlab"); setAccessibleRepos([]); if (repoUrl.includes("github")) setRepoUrl(""); }}>GitLab</button></div>
+            <div className="provider-connect"><button className="button subtle full" type="button" disabled={authBusy} onClick={() => connectGitProvider(provider)}>{authBusy ? "Redirecting…" : "Connect " + (provider === "github" ? "GitHub" : "GitLab") + " account"}</button><button className="button subtle full" type="button" disabled={loading || !token.trim()} onClick={loadAccessibleRepositories}>{loading ? "Loading…" : "Load repositories I can access"}</button>{accessibleRepos.length > 0 && <><label htmlFor="accessible-repos">Accessible repositories</label><select id="accessible-repos" defaultValue="" onChange={event => chooseAccessibleRepository(event.target.value)}><option value="" disabled>Choose a repository…</option>{accessibleRepos.map(item => <option key={item.label} value={item.label}>{item.label}</option>)}</select></>}</div>
             <label htmlFor="repo-url">Repository URL</label><input id="repo-url" value={repoUrl} onChange={e => setRepoUrl(e.target.value)} placeholder={provider === "github" ? "https://github.com/org/site" : "https://gitlab.com/group/site"} required />
             <div className="field-row"><div><label htmlFor="branch">Branch</label><input id="branch" value={branch} onChange={e => setBranch(e.target.value)} placeholder="main" required /></div><div><label htmlFor="root">Folder (optional)</label><input id="root" value={root} onChange={e => setRoot(e.target.value)} placeholder="/" /></div></div>
-            <label htmlFor="git-token">Access token <span className="label-hint">memory only</span></label><input id="git-token" type="password" value={token} onChange={e => setToken(e.target.value)} placeholder="Paste repository token" required autoComplete="off" />
-            <p className="helper">Token stays in this tab's memory and is never saved to the database. Use the minimum repository read/write permissions needed.</p>
+            <label htmlFor="git-token">Access token <span className="label-hint">memory only</span></label><input id="git-token" type="password" value={token} onChange={e => setToken(e.target.value)} placeholder={token ? "Provider session connected" : "Optional fallback: paste repository token"} autoComplete="off" />
+            <p className="helper">Prefer provider sign-in and repository selection. Git credentials are not written to the visual-editor project or revision tables.</p>
             <button className="button primary full" type="submit" disabled={loading}>{loading ? "Connecting…" : "Connect repository →"}</button>
           </form>}
           <div className="files-heading"><span>FILES</span><span className="count">{visibleFiles.length}</span></div>
