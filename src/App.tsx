@@ -39,7 +39,7 @@ const runtime = `
       parent.postMessage({ type: 've-selected', element: { id: selected.getAttribute('data-ve-id'), tag: selected.tagName.toLowerCase(), text: selected.innerText || selected.textContent || '', href: selected.getAttribute('href') || '', src: selected.getAttribute('src') || '', alt: selected.getAttribute('alt') || '', color: selected.style.color || '', backgroundColor: selected.style.backgroundColor || '', fontSize: selected.style.fontSize || '', margin: selected.style.margin || '', padding: selected.style.padding || '', width: selected.style.width || '', textAlign: selected.style.textAlign || '' } }, '*');
     }
     if (data.type === 've-duplicate' && selected && selected.parentElement) {
-      var clone = selected.cloneNode(true); clone.removeAttribute('data-ve-selected'); clone.querySelectorAll('[data-ve-id]').forEach(function (n) { n.removeAttribute('data-ve-id'); }); selected.parentElement.insertBefore(clone, selected.nextSibling);
+      var clone = selected.cloneNode(true); clone.removeAttribute('data-ve-selected'); var nextId = document.querySelectorAll('[data-ve-id]').length + 1; clone.setAttribute('data-ve-id', String(nextId++)); clone.querySelectorAll('*').forEach(function (n) { n.setAttribute('data-ve-id', String(nextId++)); n.removeAttribute('data-ve-selected'); }); selected.parentElement.insertBefore(clone, selected.nextSibling);
       parent.postMessage({ type: 've-changed' }, '*');
     }
     if (data.type === 've-remove' && selected && selected.parentElement) { selected.remove(); selected = null; parent.postMessage({ type: 've-selected', element: null }); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-move-up' && selected && selected.previousElementSibling) { selected.parentElement.insertBefore(selected, selected.previousElementSibling); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-move-down' && selected && selected.nextElementSibling) { selected.parentElement.insertBefore(selected.nextElementSibling, selected); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-select-id') { var target = document.querySelector('[data-ve-id="' + String(data.id).replace(/[^0-9]/g, '') + '"]'); if (target) target.click(); }\n    if (data.type === 've-links') { parent.postMessage({ type: 've-links-result', links: Array.from(document.querySelectorAll('a[href]')).map(function (a) { return { id: a.getAttribute('data-ve-id'), text: (a.innerText || a.textContent || '').trim().slice(0, 120), href: a.getAttribute('href') || '' }; }) }, '*'); }
@@ -104,6 +104,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    if (!user || !repo) {
+      if (!user) setSavedProjectId(null);
+      return () => { active = false; };
+    }
+    supabase.from("visual_editor_projects").select("id")
+      .eq("owner_id", user.id)
+      .eq("provider", repo.provider)
+      .eq("repository_owner", repo.owner)
+      .eq("repository_name", repo.name)
+      .maybeSingle()
+      .then(({ data, error }) => { if (active && !error) setSavedProjectId(data?.id || null); });
+    return () => { active = false; };
+  }, [user, repo?.provider, repo?.owner, repo?.name]);
+
+  useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== frameRef.current?.contentWindow) return;
       if (event.data?.type === "ve-selected") setSelected(event.data.element || emptyElement);
@@ -149,6 +165,20 @@ export default function App() {
     setLoading(true);
     try {
       const file = await readRepositoryFile(repo, token.trim(), path);
+      if (user && savedProjectId) {
+        const { data: draft } = await supabase.from("visual_editor_revisions").select("snapshot,created_at")
+          .eq("project_id", savedProjectId).eq("owner_id", user.id).eq("status", "draft")
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        const snapshot = draft?.snapshot as { path?: string; content?: string } | undefined;
+        if (snapshot?.path === path && typeof snapshot.content === "string" && snapshot.content !== file.content &&
+            window.confirm("A saved database draft exists for this page. Restore that draft into the editor?")) {
+          const draftFile = { ...file, content: snapshot.content };
+          setCurrentFile(draftFile); setOriginalFile(file); setSelected(emptyElement); setDirty(true);
+          setFrameHtml(/\.html?$/i.test(path) ? buildPreview(snapshot.content, repo, path) : "");
+          setNotice({ kind: "ok", text: "Restored the latest saved draft from the database. Review it before committing." });
+          return;
+        }
+      }
       if (!/\.html?$/i.test(path)) {
         setCurrentFile(file); setOriginalFile(file); setFrameHtml(""); setSelected(emptyElement);
         setNotice({ kind: "info", text: "This source file is loaded. Direct visual preview is available for HTML files; CSS/JS/JSX source editing will be added through framework-aware editing." });
@@ -208,6 +238,11 @@ export default function App() {
     setLoading(true);
     let gitCommitted = false;
     try {
+      if (!dirty && currentFile.content === originalFile.content) {
+        setNotice({ kind: "info", text: "No source changes detected. Edit an element before committing." });
+        setLoading(false);
+        return;
+      }
       const content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
       if (content === originalFile.content) {
         setNotice({ kind: "info", text: "No source changes detected. Edit an element before committing." });
