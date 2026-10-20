@@ -80,7 +80,9 @@ export default function App() {
   const [currentFile, setCurrentFile] = useState<LoadedFile | null>(null);
   const [originalFile, setOriginalFile] = useState<LoadedFile | null>(null);
   const [frameHtml, setFrameHtml] = useState("");
-  const [selected, setSelected] = useState<SelectedElement>(emptyElement);\n  const [showLinks, setShowLinks] = useState(false);\n  const [linkInventory, setLinkInventory] = useState<Array<{id: string; text: string; href: string}>>([]);
+  const [selected, setSelected] = useState<SelectedElement>(emptyElement);
+  const [showLinks, setShowLinks] = useState(false);
+  const [linkInventory, setLinkInventory] = useState<Array<{id: string; text: string; href: string}>>([]);
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<Notice>({ kind: "info", text: "Connect a repository to start editing existing pages." });
@@ -104,7 +106,8 @@ export default function App() {
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== frameRef.current?.contentWindow) return;
-      if (event.data?.type === "ve-selected") setSelected(event.data.element || emptyElement);\n      if (event.data?.type === "ve-links-result") setLinkInventory(event.data.links || []);
+      if (event.data?.type === "ve-selected") setSelected(event.data.element || emptyElement);
+      if (event.data?.type === "ve-links-result") setLinkInventory(event.data.links || []);
       if (event.data?.type === "ve-changed") { setDirty(true); setNotice({ kind: "info", text: "Preview changed. Save a draft or commit to Git to keep it." }); }
       if (event.data?.type === "ve-html-result" && htmlResultResolve.current) {
         htmlResultResolve.current(event.data.html);
