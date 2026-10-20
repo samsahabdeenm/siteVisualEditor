@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { supabase } from "./lib/supabase";
 import { commitRepositoryFile, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
 import type { GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
+import { detectFramework } from "./lib/frameworkAdapters";
 
 type SelectedElement = { id: string; tag: string; text: string; href: string; src: string; alt: string; color: string; backgroundColor: string; fontSize: string; margin: string; padding: string; width: string; textAlign: string };
 type Notice = { kind: "ok" | "error" | "info"; text: string } | null;
@@ -64,11 +65,7 @@ function buildPreview(content: string, repo: RepoInfo, filePath: string) {
 }
 
 function inferFramework(files: RepoFile[]) {
-  const paths = new Set(files.map(f => f.path));
-  if (paths.has("next.config.js") || paths.has("next.config.ts") || paths.has("next.config.mjs")) return "Next.js";
-  if (paths.has("vite.config.ts") || paths.has("vite.config.js")) return "Vite / React";
-  if (paths.has("package.json")) return "JavaScript framework (inspect package.json)";
-  return "Static HTML / CSS / JS";
+  return detectFramework(files).label;
 }
 
 export default function App() {
@@ -212,14 +209,14 @@ export default function App() {
         setLoading(false);
         return;
       }
-      const sha = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
-      const updated = { ...currentFile, content };
-      setCurrentFile(updated); setOriginalFile({ ...updated, sha: undefined }); setDirty(false);
+      const result = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
+      const updated = { ...currentFile, content, sha: result.fileSha };
+      setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
       if (user && savedProjectId) {
-        await supabase.from("visual_editor_projects").update({ last_commit_sha: sha || null, updated_at: new Date().toISOString() }).eq("id", savedProjectId);
-        await supabase.from("visual_editor_revisions").insert({ project_id: savedProjectId, owner_id: user.id, label: `Commit · ${currentFile.path}`, status: "committed", snapshot: { path: currentFile.path, content, savedAt: new Date().toISOString() }, changed_files: [currentFile.path], commit_sha: sha || null });
+        await supabase.from("visual_editor_projects").update({ last_commit_sha: result.commitSha || null, updated_at: new Date().toISOString() }).eq("id", savedProjectId);
+        await supabase.from("visual_editor_revisions").insert({ project_id: savedProjectId, owner_id: user.id, label: `Commit · ${currentFile.path}`, status: "committed", snapshot: { path: currentFile.path, content, savedAt: new Date().toISOString() }, changed_files: [currentFile.path], commit_sha: result.commitSha || null });
       }
-      setNotice({ kind: "ok", text: `Committed ${currentFile.path} to ${repo.branch}.${sha ? ` Commit: ${sha.slice(0, 8)}` : ""}` });
+      setNotice({ kind: "ok", text: `Committed ${currentFile.path} to ${repo.branch}.${result.commitSha ? ` Commit: ${result.commitSha.slice(0, 8)}` : ""}` });
     } catch (error) {
       setNotice({ kind: "error", text: error instanceof Error ? error.message : "Git commit failed. Check token permissions." });
     } finally { setLoading(false); }
