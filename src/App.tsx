@@ -125,6 +125,47 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
+    if (!user || !token.trim() || repo) return () => { active = false; };
+    (async () => {
+      const { data, error } = await supabase.from("visual_editor_projects")
+        .select("id,provider,repository_owner,repository_name,default_branch,project_root,settings")
+        .eq("owner_id", user.id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      if (error || !data) return;
+      const parsed: RepoInfo = {
+        provider: data.provider as GitProvider,
+        owner: data.repository_owner,
+        name: data.repository_name,
+        branch: data.default_branch || "main",
+        root: data.project_root && data.project_root !== "/" ? data.project_root : ""
+      };
+      const list = await listRepositoryFiles(parsed, token.trim());
+      if (!active) return;
+      setSavedProjectId(data.id);
+      setRepo(parsed);
+      setRepoUrl(parsed.provider === "github" ? "https://github.com/" + parsed.owner + "/" + parsed.name : "https://gitlab.com/" + parsed.owner + "/" + parsed.name);
+      setProvider(parsed.provider);
+      setBranch(parsed.branch);
+      setRoot(parsed.root);
+      setFiles(list);
+      setShowConnect(false);
+      const lastPath = (data.settings as { lastOpenedFile?: string } | null)?.lastOpenedFile;
+      if (lastPath && list.some(file => file.path === lastPath)) {
+        const file = await readRepositoryFile(parsed, token.trim(), lastPath);
+        if (!active) return;
+        setCurrentFile(file);
+        setOriginalFile(file);
+        setFrameHtml(/\\.html?$/i.test(file.path) ? buildPreview(file.content, parsed, file.path) : "");
+        setSelected(emptyElement);
+      }
+      setNotice({ kind: "ok", text: "Reconnected to your last saved repository session." });
+    })().catch(error => {
+      if (active) setNotice({ kind: "info", text: error instanceof Error ? error.message : "Could not restore the last repository session. Reconnect manually." });
+    });
+    return () => { active = false; };
+  }, [user, token, repo]);
+
+  useEffect(() => {
+    let active = true;
     if (!user || !repo) {
       if (!user) setSavedProjectId(null);
       return () => { active = false; };
@@ -204,6 +245,27 @@ export default function App() {
       const parsed = parseRepositoryUrl(repoUrl, branch, root);
       if (parsed.provider !== provider) setProvider(parsed.provider);
       const list = await listRepositoryFiles(parsed, token.trim());
+      if (user) {
+        const projectPayload = {
+          owner_id: user.id, name: parsed.owner + "/" + parsed.name, provider: parsed.provider,
+          repository_owner: parsed.owner, repository_name: parsed.name, default_branch: parsed.branch,
+          project_root: parsed.root || "/", framework: inferFramework(list),
+          settings: { lastOpenedFile: null, editor: "visual" }, updated_at: new Date().toISOString()
+        };
+        const { data: existing, error: lookupError } = await supabase.from("visual_editor_projects").select("id")
+          .eq("owner_id", user.id).eq("provider", parsed.provider)
+          .eq("repository_owner", parsed.owner).eq("repository_name", parsed.name).maybeSingle();
+        if (lookupError) throw lookupError;
+        if (existing?.id) {
+          const { error } = await supabase.from("visual_editor_projects").update(projectPayload).eq("id", existing.id);
+          if (error) throw error;
+          setSavedProjectId(existing.id);
+        } else {
+          const { data: created, error } = await supabase.from("visual_editor_projects").insert(projectPayload).select("id").single();
+          if (error) throw error;
+          setSavedProjectId(created.id);
+        }
+      }
       if (!repo || repo.provider !== parsed.provider || repo.owner !== parsed.owner || repo.name !== parsed.name) setSavedProjectId(null);
       setRepo(parsed);
       setFiles(list);
