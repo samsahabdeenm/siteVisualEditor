@@ -287,6 +287,9 @@ export default function App() {
     try {
       const file = await readRepositoryFile(repo, token.trim(), path);
       if (user && savedProjectId) {
+        void supabase.from("visual_editor_projects").update({ settings: { lastOpenedFile: path, editor: "visual" }, updated_at: new Date().toISOString() }).eq("id", savedProjectId).eq("owner_id", user.id);
+      }
+      if (user && savedProjectId) {
         const { data: draft } = await supabase.from("visual_editor_revisions").select("snapshot,created_at")
           .eq("project_id", savedProjectId).eq("owner_id", user.id).eq("status", "draft")
           .order("created_at", { ascending: false }).limit(1).maybeSingle();
