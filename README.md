@@ -20,7 +20,7 @@ A Git-connected editor for modifying existing websites without generating new la
 
 ## Git connection
 
-Paste a GitHub or GitLab repository URL, branch, and a personal access token with the minimum required repository read/write scope. Tokens remain in page memory only and are never stored in the database or local storage. This is a first implementation; OAuth-backed server-side token handling should replace manual token entry before a broad public deployment.
+The workspace supports GitHub and GitLab provider sign-in, plus a manual token fallback. After provider sign-in, use **Load repositories I can access** to select a repository and its default branch. OAuth must be enabled for the chosen provider in the linked Supabase Auth settings, and the app origin must be included in allowed redirect URLs. GitHub requests the `repo` scope; GitLab requests API and repository read/write scopes. If OAuth is not configured, the UI reports the provider error and manual token entry remains available. Git credentials are not written to the visual-editor project or revision tables. For a broad public deployment, a server-side token broker or GitHub/GitLab app integration with least-privilege authorization is still recommended.
 
 ## Database
 
