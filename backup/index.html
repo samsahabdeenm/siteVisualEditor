@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>webMaster</title>
+  <link rel="icon" type="image/png" id="wmFavicon" href="/sites/oweb/images/pos/images/webmaster-mark.png">
+  <link rel="stylesheet" href="./custom.css">
+  <link rel="stylesheet" href="./styles.css?v=webmaster-20260918-13">
+</head>
+<body>
+  <main class="layout">
+    <section class="stage">
+      <div class="webmaster-command-shell">
+        <div class="webmaster-brand-row" role="banner">
+          <div class="webmaster-brand" aria-label="webMaster">
+            <span class="webmaster-brand-mark" aria-hidden="true">
+              <img src="/sites/oweb/images/pos/images/webmaster-mark.png" data-wm-img="webmaster-mark.png" alt="" onerror="this.onerror=null;this.src='./assets/webmaster-mark.png';">
+            </span>
+            <span class="webmaster-wordmark">web<span>Master</span></span>
+          </div>
+
+          <div class="stage-toolbar" aria-label="Page filters">
+            <div class="product-box">
+              <select id="productSelect" aria-label="Product"></select>
+            </div>
+            <div class="category-box">
+              <select id="categorySelect" aria-label="Filter by category">
+                <option value="all">All Categories</option>
+              </select>
+            </div>
+            <div id="regionBox" class="region-box hidden">
+              <select id="regionSelect" aria-label="Region"></select>
+            </div>
+            <div class="language-box">
+              <select id="languageSelect" aria-label="Language"></select>
+            </div>
+          </div>
+
+          <div id="globalSearchShell" class="global-search-shell">
+            <button id="globalSearchToggleBtn" type="button" class="webmaster-icon-btn global-search-toggle" aria-label="Search pages" aria-expanded="false" aria-controls="pageSearch" title="Search pages">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/>
+                <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="search-box global-search-panel">
+              <svg class="global-search-input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/>
+                <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <input id="pageSearch" type="search" placeholder="Search pages..." aria-label="Search by page URL or title" autocomplete="off">
+              <button id="globalSearchCloseBtn" type="button" class="global-search-close" aria-label="Close search" title="Close search">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="m7 7 10 10M17 7 7 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="webmaster-primary-actions">
+            <div class="manual-page-box">
+              <button id="manualPageAddBtn" type="button" class="btn manual-page-add-btn" aria-label="Add page URL manually">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="m10.6 13.4 2.8-2.8M8.5 16.5l-1.2 1.2a3.5 3.5 0 0 1-5-5l3-3a3.5 3.5 0 0 1 5 0M15.5 7.5l1.2-1.2a3.5 3.5 0 1 1 5 5l-3 3a3.5 3.5 0 0 1-5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                Add URL
+              </button>
+            </div>
+            <div class="help-docs-box">
+              <button id="helpDocsBtn" type="button" class="btn help-docs-btn" aria-label="Open webMaster guides" title="Guides">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5Z" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M8 9h7M8 12.5h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  <path d="M7.5 19.5A2.5 2.5 0 0 1 10 17h8" stroke="currentColor" stroke-width="1.7"/>
+                </svg>
+                Help Docs
+              </button>
+            </div>
+            <div class="ai-create-box">
+              <button id="aiCreatePageBtn" type="button" class="btn ai-create-btn" aria-label="Create new page with AI" title="Create new page">
+                <span class="ai-create-spark" aria-hidden="true">
+                  <svg class="ai-create-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9.5 1.8 11 6.2l4.4 1.5L11 9.2l-1.5 4.4L8 9.2 3.6 7.7 8 6.2l1.5-4.4Z" fill="currentColor"/>
+                    <path d="m15.8 12 .7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z" fill="currentColor" opacity=".78"/>
+                  </svg>
+                </span>
+                <span class="ai-create-text">Create New Page</span>
+                <span class="ai-create-badge" aria-hidden="true">AI</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <section class="page-library-toolbar" aria-labelledby="pageLibraryTitle">
+        <div class="page-library-summary">
+          <h1 id="pageLibraryTitle">Page Library</h1>
+          <p>
+            <strong id="pageLibraryCount">0 pages</strong>
+            <span aria-hidden="true">&middot;</span>
+            <span id="pageLibraryProduct">Product</span>
+          </p>
+        </div>
+        <div class="page-toolbar-right">
+          <button id="dashboardBtn" type="button" class="page-dashboard-btn" aria-label="Product audit" title="Product Audit">
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="14" height="14">
+              <circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="2"/>
+              <path d="M7 10l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Product Audit
+          </button>
+          <div class="page-view-switch" role="group" aria-label="Page view">
+            <button id="pageGridViewBtn" type="button" class="page-view-btn active" aria-label="Grid view" aria-pressed="true" title="Grid view">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="4" y="4" width="6" height="6" rx="1.2" fill="currentColor"/>
+                <rect x="14" y="4" width="6" height="6" rx="1.2" fill="currentColor"/>
+                <rect x="4" y="14" width="6" height="6" rx="1.2" fill="currentColor"/>
+                <rect x="14" y="14" width="6" height="6" rx="1.2" fill="currentColor"/>
+              </svg>
+            </button>
+            <button id="pageListViewBtn" type="button" class="page-view-btn" aria-label="List view" aria-pressed="false" title="List view">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 6h12M8 12h12M8 18h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="4" cy="6" r="1.5" fill="currentColor"/>
+                <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
+                <circle cx="4" cy="18" r="1.5" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+      <div id="stageLoadingOverlay" class="stage-loading-overlay hidden" aria-live="polite" aria-busy="true">
+        <div class="stage-loading-card">
+          <div class="stage-loading-visual" aria-hidden="true"></div>
+          <div class="stage-loading-copy">
+            <span class="stage-loading-kicker">webMaster is preparing your workspace</span>
+            <p id="stageLoadingText">Loading...</p>
+            <span class="stage-loading-progress" aria-hidden="true"><span></span></span>
+          </div>
+        </div>
+      </div>
+      <section id="cmsAccessGate" class="cms-access-gate hidden" aria-live="polite">
+        <div class="cms-access-card">
+          <div class="cms-access-brand" aria-label="webMaster">
+            <span class="cms-access-brand-mark" aria-hidden="true">
+              <img src="/sites/oweb/images/pos/images/webmaster-mark.png" data-wm-img="webmaster-mark.png" alt="" onerror="this.onerror=null;this.src='./assets/webmaster-mark.png';">
+            </span>
+            <span class="cms-access-brand-wordmark">web<span>Master</span></span>
+          </div>
+          <div class="cms-access-body">
+            <div class="cms-access-icon-wrap" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="18" r="8" stroke="currentColor" stroke-width="2.4"/>
+                <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2 id="cmsAccessGateTitle">Sign in to webMaster</h2>
+            <p id="cmsAccessGateText">Please log in with your Zoho account to access your dashboard.</p>
+            <a id="cmsAccessGateLoginBtn" class="btn btn-primary cms-access-login" href="#">
+              <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 10h14M11 4l6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Sign in
+            </a>
+          </div>
+        </div>
+      </section>
+      <div id="pageGrid" class="page-grid"></div>
+    </section>
+  </main>
+
+  <div id="previewModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+    <div class="modal-card wide">
+      <div class="modal-head">
+        <div class="preview-head-left">
+          <h2 id="previewTitle">Preview</h2>
+          <div id="previewDeviceTabs" class="preview-device-tabs" role="tablist" aria-label="Preview device view">
+            <button type="button" class="preview-device-tab" data-preview-device="mobile">Mobile</button>
+            <button type="button" class="preview-device-tab" data-preview-device="tablet">Tab</button>
+            <button type="button" class="preview-device-tab active" data-preview-device="desktop">Desk</button>
+            <button type="button" class="preview-device-tab" data-preview-device="monitor">Monitor</button>
+          </div>
+        </div>
+        <button id="closePreviewModalBtn" class="btn">Close</button>
+      </div>
+      <div id="previewCanvas" class="preview-canvas">
+        <div id="previewFrameShell" class="preview-frame-shell">
+          <iframe
+            id="previewFrame"
+            title="Preview"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            referrerpolicy="no-referrer"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dashboard Modal ─────────────────────────────────────────────────── -->
+  <div id="dashboardModal" class="modal dashboard-modal hidden" role="dialog" aria-modal="true" aria-labelledby="dashboardModalTitle" aria-hidden="true">
+    <div class="modal-card full dashboard-card">
+      <div class="dashboard-head">
+        <div class="dashboard-heading">
+          <h2 id="dashboardModalTitle">Product Audit</h2>
+          <span id="dashboardProductLabel" class="dashboard-product-label"></span>
+        </div>
+        <button id="dashboardCloseBtn" type="button" class="btn">Close</button>
+      </div>
+      <div id="dashboardBody" class="dashboard-body">
+        <div class="dashboard-loading" id="dashboardLoading">
+          <div class="dashboard-loading-spinner"></div>
+          <p>Scanning all pages…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Product Audit Full-Page View ──────────────────────────────────────── -->
+  <div id="productAuditView" class="product-audit-view hidden" role="main" aria-label="Product Audit">
+    <div class="audit-view-header">
+      <!-- Back -->
+      <button id="auditViewBackBtn" type="button" class="audit-back-btn" aria-label="Back to existing pages">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="15" height="15"><path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <span class="audit-header-sep" aria-hidden="true"></span>
+      <!-- Brand + context -->
+      <div class="audit-view-brand">
+        <span class="audit-view-brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+            <rect x="2" y="12" width="4" height="8" rx="1.5" fill="url(#avb1)"/>
+            <rect x="9" y="7" width="4" height="13" rx="1.5" fill="url(#avb2)"/>
+            <rect x="16" y="4" width="4" height="16" rx="1.5" fill="url(#avb3)"/>
+            <defs>
+              <linearGradient id="avb1" x1="2" y1="12" x2="6" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+              <linearGradient id="avb2" x1="9" y1="7" x2="13" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient>
+              <linearGradient id="avb3" x1="16" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+            </defs>
+          </svg>
+        </span>
+        <div class="audit-view-brand-text">
+          <h2 class="audit-view-title">Product Audit</h2>
+          <p class="audit-view-subtitle">Working on <strong id="auditViewProductName">—</strong></p>
+        </div>
+      </div>
+      <!-- Spacer -->
+      <span class="audit-header-spacer" aria-hidden="true"></span>
+      <!-- Right: meta + actions -->
+      <div class="audit-view-header-right">
+        <span id="auditViewScanMeta" class="audit-scan-meta"></span>
+        <button id="auditViewRescanBtn" type="button" class="audit-rescan-btn" aria-label="Re-run audit">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" width="13" height="13"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.7 0 3.2.76 4.24 1.96" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M10.5 4.5l2-.5.5-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Re-scan
+        </button>
+      </div>
+    </div>
+    <div id="auditViewBody" class="audit-view-body">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <div id="pageInsightsModal" class="modal page-insights-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pageInsightsTitle" aria-hidden="true">
+    <div class="modal-card full page-insights-card">
+      <div class="page-insights-head">
+        <div class="page-insights-heading">
+          <p class="page-insights-kicker">webMaster Page Intelligence</p>
+          <div class="page-insights-title-row">
+            <h2 id="pageInsightsTitle">Page Insights</h2>
+            <span id="pageInsightsContext" class="page-insights-context">Live Insights</span>
+          </div>
+          <p id="pageInsightsUrl" class="page-insights-url"></p>
+        </div>
+        <div class="page-insights-head-actions">
+          <button id="pageInsightsRefreshBtn" type="button" class="btn page-insights-refresh-btn" aria-label="Run analysis again">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 8a7.5 7.5 0 1 0 .2 7.7M19 3v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Run Again
+          </button>
+          <button id="pageInsightsCloseBtn" type="button" class="btn">Close</button>
+        </div>
+      </div>
+      <div id="pageInsightsBody" class="page-insights-body">
+        <div class="page-insights-loading" role="status" aria-live="polite">
+          <span class="page-insights-loader" aria-hidden="true"></span>
+          <h3>Reading the current page</h3>
+          <p>Checking discoverability, content, experience, and publish readiness.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="workbench" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="workbenchTitle">
+    <div class="modal-card full">
+      <div class="modal-head">
+        <div class="workbench-head-left">
+          <div class="workbench-product-brand" aria-label="webMaster">
+            <span class="workbench-product-mark" aria-hidden="true">
+              <img src="/sites/oweb/images/pos/images/webmaster-mark.png" data-wm-img="webmaster-mark.png" alt="" onerror="this.onerror=null;this.src='./assets/webmaster-mark.png';">
+            </span>
+            <span class="workbench-product-wordmark">web<span>Master</span></span>
+          </div>
+          <button id="backWorkbenchBtn" class="btn back-workbench-btn hidden" type="button" aria-label="Back to page list">
+            Back
+          </button>
+          <div class="workbench-title-block">
+            <h2 id="workbenchTitle">Template Selected</h2>
+            <p id="selectedPageLabel">No page selected</p>
+            <span id="zakyaTemplateBadge" class="zakya-template-badge hidden" aria-label="Zakya sub-features template — API save active">⚡ Zakya API</span>
+          </div>
+        </div>
+        <div class="head-actions">
+          <div id="inlineEditorFinalActions" class="inline-editor-final-actions hidden">
+            <button id="inlineEditorUndoBtn" type="button" class="btn btn-muted" aria-label="Undo last change">Undo</button>
+            <button id="inlineEditorRedoBtn" type="button" class="btn btn-muted" aria-label="Redo last change">Redo</button>
+            <button id="inlineEditorResetBtn" type="button" class="btn btn-muted" aria-label="Reset current changes">Reset Changes</button>
+            <button id="inlineEditorFindReplaceBtn" type="button" class="btn btn-muted" aria-label="Find and replace in current HTML">Find &amp; Replace</button>
+            <span class="wb-flex-spacer" aria-hidden="true"></span>
+            <button id="inlineEditorFinalizeBtn" type="button" class="btn btn-primary" aria-label="Save and update page">Update</button>
+          </div>
+          <!-- Close icon — always visible outside finalActions -->
+          <button id="closeWorkbenchBtn" class="btn wb-close-icon-btn" aria-label="Close workbench" title="Close">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" width="16" height="16"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="workbenchBody" class="workbench-body">
+        <aside id="inlineEditorPanel" class="inline-editor-panel hidden" aria-live="polite">
+          <div class="inline-editor-summary">
+            <p id="inlineEditorHint" class="inline-editor-hint"></p>
+            <span id="inlineEditorCount" class="inline-editor-count"></span>
+          </div>
+          <section id="inlinePageMetaPanel" class="inline-page-meta-panel hidden" aria-label="Page settings">
+            <h3 class="inline-page-meta-title">Page Settings</h3>
+            <div id="inlinePageTitleWrap" class="inline-page-meta-field hidden">
+              <label class="inline-editor-label" for="inlinePageTitleInput">Page Title <span class="inline-required">*</span></label>
+              <input id="inlinePageTitleInput" type="text" spellcheck="true" placeholder="CRM Plus - Home page">
+            </div>
+            <div id="inlinePageProductWrap" class="inline-page-meta-field hidden">
+              <label class="inline-editor-label" for="inlinePageProductSelect">Select Product <span class="inline-required">*</span></label>
+              <select id="inlinePageProductSelect"></select>
+              <p id="inlinePageProductHelper" class="inline-page-meta-helper"></p>
+            </div>
+            <div class="inline-page-meta-field">
+              <label class="inline-editor-label" for="inlinePageUrlAliasInput">URL Alias <span class="inline-required">*</span></label>
+              <input id="inlinePageUrlAliasInput" type="text" spellcheck="false" placeholder="/crm/crmplus/index.html">
+              <p id="inlinePageUrlAliasHelper" class="inline-page-meta-helper"></p>
+            </div>
+            <div class="inline-page-meta-row">
+              <label id="inlinePageRegionWrap" class="inline-page-meta-field inline-page-meta-field-compact hidden" for="inlinePageRegionSelect">
+                <span class="inline-editor-label">Region</span>
+                <select id="inlinePageRegionSelect"></select>
+                <p id="inlinePageRegionHelper" class="inline-page-meta-helper"></p>
+              </label>
+              <label class="inline-page-meta-field inline-page-meta-field-compact" for="inlineMetaLanguageSelect">
+                <span class="inline-editor-label">Language</span>
+                <select id="inlineMetaLanguageSelect"></select>
+              </label>
+            </div>
+            <div class="inline-page-meta-row">
+              <label class="inline-page-meta-field inline-page-meta-field-compact" for="inlinePublishStateSelect">
+                <span class="inline-editor-label">Change To</span>
+                <select id="inlinePublishStateSelect">
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                </select>
+              </label>
+            </div>
+            <div class="inline-page-meta-field">
+              <label class="inline-editor-label" for="inlineMetaTitleInput">Meta Title <span class="inline-required">*</span></label>
+              <input id="inlineMetaTitleInput" type="text" spellcheck="true" placeholder="Unified Customer Experience Platform | Zoho CRM Plus">
+              <p id="inlineMetaTitleHelper" class="inline-page-meta-helper"></p>
+            </div>
+            <div class="inline-page-meta-field">
+              <label class="inline-editor-label" for="inlineMetaDescriptionInput">Meta Description <span class="inline-required">*</span></label>
+              <textarea id="inlineMetaDescriptionInput" rows="3" spellcheck="true" placeholder="Add a concise description"></textarea>
+              <p id="inlineMetaDescriptionHelper" class="inline-page-meta-helper"></p>
+            </div>
+            <label class="inline-page-toggle inline-page-toggle-switch inline-page-toggle-switch-sm" for="inlineRestrictLiveAccessToggle">
+              <input id="inlineRestrictLiveAccessToggle" type="checkbox">
+              <span>Restrict Live Access</span>
+            </label>
+            <label class="inline-page-toggle inline-page-toggle-switch inline-page-toggle-switch-sm" for="inlineNoCrawlToggle">
+              <input id="inlineNoCrawlToggle" type="checkbox">
+              <span>No Crawl (noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate)</span>
+            </label>
+          </section>
+          <div id="inlineEditorTabs" class="inline-editor-tabs" role="tablist" aria-label="Editable groups">
+            <button type="button" class="inline-editor-tab active" data-inline-type="page-settings">Page Settings</button>
+            <button type="button" class="inline-editor-tab" data-inline-type="text">Text</button>
+            <button type="button" class="inline-editor-tab" data-inline-type="link">Links</button>
+            <button type="button" class="inline-editor-tab" data-inline-type="image">Media</button>
+          </div>
+          <div id="inlineEditorList" class="inline-editor-list" role="listbox" aria-label="Editable items"></div>
+          <div id="inlineEditorForm" class="inline-editor-form hidden">
+            <label id="inlineEditorValueLabel" class="inline-editor-label" for="inlineEditorTextInput">Text</label>
+            <div id="inlineEditorTextToolbar" class="inline-editor-text-toolbar hidden" role="toolbar" aria-label="Text formatting">
+              <button type="button" class="inline-editor-tool-btn" data-rte-action="bold" data-rte-command="bold" aria-label="Bold"><strong>B</strong></button>
+              <span class="inline-editor-tool-sep" aria-hidden="true"></span>
+              <button type="button" class="inline-editor-tool-btn" data-rte-action="link" aria-label="Add link">Link</button>
+            </div>
+
+            <div id="inlineEditorLinkQuick" class="inline-editor-link-quick hidden" aria-label="Link editor">
+              <input id="inlineEditorRteLinkInput" type="text" spellcheck="false" placeholder="https://...">
+              <button type="button" id="inlineEditorRteLinkApplyBtn" class="inline-editor-tool-btn">Apply</button>
+              <button type="button" id="inlineEditorRteLinkCancelBtn" class="inline-editor-tool-btn">Cancel</button>
+            </div>
+            <div id="inlineEditorTextEditor" class="inline-editor-text-editor hidden" contenteditable="true" role="textbox" aria-multiline="true"></div>
+            <textarea id="inlineEditorTextInput" rows="3" spellcheck="true"></textarea>
+            <label id="inlineEditorUrlLabel" class="inline-editor-label hidden" for="inlineEditorUrlInput">URL</label>
+            <input id="inlineEditorUrlInput" class="hidden" type="text" spellcheck="false" placeholder="https://...">
+            <div id="inlineEditorLinkToggleWrap" class="inline-editor-link-toggle hidden">
+              <label for="inlineEditorNewTabToggle">
+                <input id="inlineEditorNewTabToggle" type="checkbox">
+                Open in new tab
+              </label>
+            </div>
+            <div id="inlineEditorImageFields" class="inline-editor-image-fields hidden"></div>
+            <label id="inlineEditorAltLabel" class="inline-editor-label hidden" for="inlineEditorAltInput">Alt Text</label>
+            <input id="inlineEditorAltInput" class="hidden" type="text" spellcheck="true" placeholder="Image alt text">
+            <p id="inlineEditorAltHelper" class="inline-page-meta-helper hidden"></p>
+            <div id="inlineMediaUploadModal" class="inline-media-upload-modal hidden" aria-hidden="true">
+              <div class="inline-media-upload-card" role="dialog" aria-modal="true" aria-labelledby="inlineMediaUploadTitle">
+                <div class="inline-media-upload-head">
+                  <div>
+                    <h4 id="inlineMediaUploadTitle">Upload Media</h4>
+                    <p id="inlineMediaUploadFieldLabel" class="inline-media-upload-subtitle"></p>
+                  </div>
+                  <button id="inlineMediaUploadCloseBtn" type="button" class="btn">Close</button>
+                </div>
+                <label class="inline-editor-label" for="inlineMediaUploadProductSelect">Product</label>
+                <select id="inlineMediaUploadProductSelect"></select>
+                <label class="inline-editor-label" for="inlineMediaUploadSubfolderSelect">Subfolder</label>
+                <select id="inlineMediaUploadSubfolderSelect">
+                  <option value="">None</option>
+                </select>
+                <label class="inline-editor-label" for="inlineMediaUploadFileInput">Choose File</label>
+                <input id="inlineMediaUploadFileInput" type="file" accept="image/*,video/*">
+                <div class="inline-media-upload-feedback">
+                  <p id="inlineMediaUploadStatus" class="inline-page-meta-helper">
+                    <a id="inlineMediaUploadActionLink" class="inline-media-upload-action-link hidden" href="#" target="_blank" rel="noopener noreferrer">edit</a>
+                  </p>
+                </div>
+                <div class="inline-editor-actions">
+                  <button id="inlineMediaUploadSubmitBtn" type="button" class="btn btn-primary">Upload</button>
+                  <button id="inlineMediaUploadCancelBtn" type="button" class="btn">Cancel</button>
+                </div>
+              </div>
+            </div>
+            <div class="inline-editor-actions">
+              <button id="inlineEditorSaveBtn" type="button" class="btn btn-primary">Save</button>
+              <button id="inlineEditorCancelBtn" type="button" class="btn">Cancel</button>
+            </div>
+          </div>
+        </aside>
+        <!-- ── Animation Mode Panel (inside workbench grid — replaces editor panel) ── -->
+        <div id="animModePanel" class="anim-panel" role="complementary" aria-label="Animation editor">
+          <div class="anim-panel-inner">
+            <div class="anim-panel-head">
+              <div class="anim-panel-head-left">
+                <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="anim-panel-icon" aria-hidden="true"><path d="M10 2C10 2 14 5.5 14 10C14 14.5 10 17.5 10 17.5C10 17.5 6 14.5 6 10C6 5.5 10 2 10 2Z" stroke="currentColor" stroke-width="1.5" fill="none"/><circle cx="10" cy="10" r="2" fill="currentColor"/></svg>
+                <div>
+                  <h3 class="anim-panel-title">Animation Mode</h3>
+                  <p class="anim-panel-subtitle" id="animPanelHint">Click any element on the page</p>
+                </div>
+              </div>
+              <div class="anim-panel-head-actions">
+                <button id="animAiSuggestBtn" type="button" class="anim-ai-suggest-btn" title="Coming soon — AI will suggest animations for each section" disabled>
+                  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" style="width:13px;height:13px"><path d="M8 1L9.4 5.3L14 6.5L9.4 7.7L8 12L6.6 7.7L2 6.5L6.6 5.3L8 1Z" fill="currentColor"/></svg>
+                  <span class="anim-ai-label">AI Suggest</span>
+                </button>
+                <button id="animSaveChangesBtn" type="button" class="anim-save-btn" aria-label="Save animation changes to CMS">✓ Save Changes</button>
+                <button id="animPanelCloseBtn" type="button" class="anim-panel-close" aria-label="Exit Animation Mode">✕ Exit</button>
+              </div>
+            </div>
+
+            <!-- Selected element info -->
+            <div id="animTargetInfo" class="anim-target-info hidden">
+              <div class="anim-target-left">
+                <span class="anim-target-tag" id="animTargetTag">div</span>
+                <span class="anim-target-type-badge" id="animTargetTypeBadge">General</span>
+              </div>
+              <button id="animRemoveBtn" type="button" class="anim-remove-btn hidden" aria-label="Remove animation">✕ Remove</button>
+            </div>
+
+            <!-- Category tabs -->
+            <div class="anim-category-tabs" role="tablist" aria-label="Animation category">
+              <button class="anim-cat-tab active" data-anim-cat="single" role="tab" aria-selected="true">Single</button>
+              <button class="anim-cat-tab" data-anim-cat="directional" role="tab" aria-selected="false">Directional</button>
+              <button class="anim-cat-tab" data-anim-cat="groups" role="tab" aria-selected="false">Groups</button>
+              <button class="anim-cat-tab" data-anim-cat="scenes" role="tab" aria-selected="false">Scenes</button>
+            </div>
+
+            <!-- Animation picker grid -->
+            <div id="animPickerGrid" class="anim-picker-grid" role="listbox" aria-label="Choose animation"></div>
+
+            <!-- Controls (shown after picking an animation) -->
+            <div id="animControls" class="anim-controls hidden">
+              <div class="anim-control-row">
+                <label class="anim-ctrl-label" for="animTriggerSelect">Trigger</label>
+                <select id="animTriggerSelect" class="anim-ctrl-select" disabled>
+                  <option value="scroll">Viewport Reveal</option>
+                  <option value="scroll-pct">Scroll Progress</option>
+                </select>
+              </div>
+              <div class="anim-control-row" id="animSpeedRow" style="display:none">
+                <label class="anim-ctrl-label">Intensity</label>
+                <div class="anim-ctrl-slider-row">
+                  <input id="animSpeedRange" type="range" min="0.1" max="3" step="0.1" value="1" class="anim-ctrl-range">
+                  <span id="animSpeedVal" class="anim-ctrl-val">1.0×</span>
+                </div>
+              </div>
+              <div class="anim-control-row" id="animPerspRow" style="display:none">
+                <label class="anim-ctrl-label">Perspective</label>
+                <div class="anim-ctrl-slider-row">
+                  <input id="animPerspRange" type="range" min="400" max="2000" step="100" value="1440" class="anim-ctrl-range">
+                  <span id="animPerspVal" class="anim-ctrl-val">1440px</span>
+                </div>
+              </div>
+              <div class="anim-control-row">
+                <label class="anim-ctrl-label">Duration</label>
+                <div class="anim-ctrl-slider-row">
+                  <input id="animDurationRange" type="range" min="0.2" max="3" step="0.1" value="0.6" class="anim-ctrl-range">
+                  <span id="animDurationVal" class="anim-ctrl-val">0.6s</span>
+                </div>
+              </div>
+              <div class="anim-control-row">
+                <label class="anim-ctrl-label">Delay</label>
+                <div class="anim-ctrl-slider-row">
+                  <input id="animDelayRange" type="range" min="0" max="2" step="0.05" value="0" class="anim-ctrl-range">
+                  <span id="animDelayVal" class="anim-ctrl-val">0s</span>
+                </div>
+              </div>
+              <div class="anim-control-row">
+                <label class="anim-ctrl-label">Easing</label>
+                <select id="animEasingSelect" class="anim-ctrl-select">
+                  <option value="cubic-bezier(0.22,1,0.36,1)">Smooth (default)</option>
+                  <option value="ease-out">Ease Out</option>
+                  <option value="ease-in">Ease In</option>
+                  <option value="ease-in-out">Ease In-Out</option>
+                  <option value="linear">Linear</option>
+                  <option value="cubic-bezier(0.34,1.56,0.64,1)">Spring</option>
+                  <option value="cubic-bezier(0.175,0.885,0.32,1.275)">Bounce</option>
+                </select>
+              </div>
+              <div class="anim-control-row">
+                <label class="anim-ctrl-label">Options</label>
+                <div class="anim-ctrl-checks">
+                  <label class="anim-ctrl-check"><input type="checkbox" id="animOnceCheck" checked> Play once</label>
+                </div>
+              </div>
+              <div class="anim-ctrl-actions">
+                <button id="animPreviewBtn" type="button" class="btn anim-preview-btn">▶ Preview</button>
+                <button id="animApplyBtn"   type="button" class="btn btn-primary anim-apply-btn">✓ Apply</button>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div id="animEmptyState" class="anim-empty-state">
+              <div class="anim-empty-icon">✦</div>
+              <p>Click any element on the page to add or change its animation.</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="workbenchCanvas" class="workbench-canvas">
+
+          <!-- In-workbench mode picker: appears after page renders -->
+          <div id="workbenchModePicker" class="wb-mode-picker hidden" role="dialog" aria-modal="false" aria-label="Choose how to edit this page">
+            <div class="wb-mode-picker-panel">
+              <p class="wb-mode-picker-label">How do you want to work on this page?</p>
+              <div class="wb-mode-picker-options">
+                <button type="button" class="wb-mode-option" id="workbenchModePickerEdit">
+                  <span class="wb-mode-option-icon">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="4" y="5" width="24" height="22" rx="3" stroke="currentColor" stroke-width="1.8" fill="none"/>
+                      <path d="M4 10h24" stroke="currentColor" stroke-width="1.5"/>
+                      <path d="M9 15h14M9 19h10M9 23h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <span class="wb-mode-option-name">Page Edit</span>
+                  <span class="wb-mode-option-desc">Edit text, links &amp; images</span>
+                </button>
+                <button type="button" class="wb-mode-option" id="workbenchModePickerAnimate">
+                  <span class="wb-mode-option-icon">
+                    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="16" cy="16" r="11" stroke="currentColor" stroke-width="1.8" fill="none"/>
+                      <circle cx="16" cy="16" r="3.5" fill="currentColor"/>
+                      <path d="M7 16H4M28 16h-3M16 4V7M16 25v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                      <path d="M10 10l-1.5-1.5M23.5 23.5L22 22M22 10l1.5-1.5M8.5 23.5L10 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <span class="wb-mode-option-name">Animation</span>
+                  <span class="wb-mode-option-desc">Add scroll &amp; motion effects</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="workbenchCanvasTopbar" class="workbench-canvas-topbar hidden">
+            <div id="workbenchDeviceTabs" class="preview-device-tabs workbench-device-tabs" role="tablist" aria-label="Edit page device view">
+              <button type="button" class="preview-device-tab" data-workbench-device="mobile">
+                <span class="device-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                <span>Mobile</span>
+              </button>
+              <button type="button" class="preview-device-tab" data-workbench-device="tablet">
+                <span class="device-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="18" r="1" fill="currentColor"/></svg></span>
+                <span>Tab</span>
+              </button>
+              <button type="button" class="preview-device-tab active" data-workbench-device="desktop">
+                <span class="device-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="13" rx="1.7" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                <span>Desk</span>
+              </button>
+              <button type="button" class="preview-device-tab" data-workbench-device="monitor">
+                <span class="device-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="3.5" width="19" height="14" rx="1.8" stroke="currentColor" stroke-width="1.8"/><path d="M7 21h10M12 17.5V21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                <span>Monitor</span>
+              </button>
+            </div>
+            <!-- Right actions group — opposite side of device tabs -->
+            <div class="wb-canvas-actions">
+              <button id="inlineEditorInsightsBtn" type="button" class="btn btn-muted insights-nav-btn" aria-label="Open Page Intelligence">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:3px"><path d="M2.5 13.5h11M3.5 11V7.5M7.9 11V3.5M12.3 11V5.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="3.5" cy="5.2" r="1" fill="currentColor"/><circle cx="12.3" cy="3.5" r="1" fill="currentColor"/></svg>Insights
+              </button>
+              <button id="aiWorkbenchNavBtn" type="button" class="btn ai-nav-btn" aria-label="Edit page with AI">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:3px"><path d="M8 1.5L9.4 5.8 14 7.5 9.4 9.2 8 13.5 6.6 9.2 2 7.5 6.6 5.8 8 1.5Z" fill="currentColor"/></svg>AI
+              </button>
+              <button id="animModeNavBtn" type="button" class="btn anim-nav-btn" aria-label="Toggle Animation Mode" aria-pressed="false">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:3px"><path d="M8 1C8 1 11 3.8 11 8C11 12.2 8 14.5 8 14.5C8 14.5 5 12.2 5 8C5 3.8 8 1 8 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><path d="M2 8H3.5M12.5 8H14M8 2.5V4M8 12V13.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Animate
+              </button>
+              <div id="workbenchModeSwitcher" class="wb-mode-switcher hidden" role="group" aria-label="Edit mode">
+                <button type="button" id="workbenchModeSwitchEdit" class="wb-mode-switch-btn" data-wb-mode="edit" aria-pressed="true">
+                  <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:3px"><path d="M2 11.5h10M3 9L9 3l2 2-6 6H3V9Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Edit
+                </button>
+                <button type="button" id="workbenchModeSwitchAnim" class="wb-mode-switch-btn" data-wb-mode="animate" aria-pressed="false">
+                  <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:11px;height:11px;display:inline;vertical-align:middle;margin-right:3px"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.6" fill="currentColor"/><path d="M3 7H2M12 7h-1M7 2V3M7 11v1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Animate
+                </button>
+              </div>
+              <button id="inlineEditorRevisionsBtn" type="button" class="btn btn-muted hidden" aria-label="Open page revisions in a new tab">Revisions</button>
+              <button id="inlineEditorGetUrlsBtn" type="button" class="btn btn-muted hidden" aria-label="Get page URLs">Get URLs</button>
+            </div>
+          </div>
+          <div id="aiWorkbenchPanel" class="ai-workbench-panel hidden" role="region" aria-label="AI page generator">
+            <div class="ai-workbench-inner">
+              <div class="ai-workbench-hero">
+                <div class="ai-workbench-icon-wrap" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 4L28.2 16.8L41 21L28.2 25.2L24 38L19.8 25.2L7 21L19.8 16.8L24 4Z" fill="url(#ai-grad)"/>
+                    <circle cx="38" cy="10" r="3.5" fill="#a78bfa" opacity="0.8"/>
+                    <circle cx="10" cy="38" r="2.5" fill="#818cf8" opacity="0.6"/>
+                    <circle cx="40" cy="36" r="2" fill="#c4b5fd" opacity="0.5"/>
+                    <defs>
+                      <linearGradient id="ai-grad" x1="7" y1="4" x2="41" y2="38" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#6366f1"/>
+                        <stop offset="1" stop-color="#a78bfa"/>
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <h3 class="ai-workbench-title">Generate a new page with AI</h3>
+                <p class="ai-workbench-subtitle">Describe what you want, upload designs or docs, and let AI build the page.</p>
+              </div>
+              <div class="ai-workbench-form">
+                <label class="ai-workbench-label" for="aiCreatePrompt">What page do you want to create?</label>
+                <div class="ai-prompt-shell">
+                  <textarea id="aiCreatePrompt" class="ai-workbench-textarea" rows="4" placeholder="e.g. Create a product landing page for POS with a hero banner, features section, and CTA. Use the uploaded design as reference."></textarea>
+                  <button id="aiCreateVoiceBtn" type="button" class="ai-voice-btn" aria-label="Describe the page using your voice" aria-pressed="false" title="Voice input">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" stroke-width="1.8"/>
+                      <path d="M5.8 11.5a6.2 6.2 0 0 0 12.4 0M12 17.7V21M8.8 21h6.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="ai-workbench-upload-row">
+                  <label class="ai-workbench-upload-label" for="aiCreateFileInput">
+                    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 13V7M10 7L7.5 9.5M10 7L12.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16h10M3 12.5A3.5 3.5 0 016.5 9a3.5 3.5 0 016.98-.49A2.5 2.5 0 0117 11a2.5 2.5 0 01-2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    Attach files
+                    <input id="aiCreateFileInput" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.svg,.figma,.zip,.json,.html,.css,.txt" class="ai-file-input-hidden">
+                  </label>
+                  <div id="aiCreateFileList" class="ai-workbench-file-list"></div>
+                </div>
+                <div id="aiCreateError" class="ai-workbench-error hidden"></div>
+                <button id="aiCreateGenerateBtn" type="button" class="btn ai-generate-btn">
+                  <svg class="ai-generate-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 2L11.8 7.2L17 9L11.8 10.8L10 16L8.2 10.8L3 9L8.2 7.2L10 2Z" fill="currentColor"/></svg>
+                  Generate Page
+                </button>
+              </div>
+              <div id="aiCreateLoader" class="ai-workbench-loader hidden" aria-live="polite" aria-busy="true">
+                <div class="ai-loader-ring"></div>
+                <p class="ai-loader-text">Generating your page...</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="workbenchFrameShell" class="workbench-frame-shell">
+            <div id="wbHealthBar" class="wb-health-bar hidden" role="alert" aria-live="polite">
+              <div class="wb-health-bar-inner">
+                <svg class="wb-health-bar-icon" viewBox="0 0 20 20" fill="none" width="15" height="15"><path d="M10 3L2 17h16L10 3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 8v4M10 14.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span id="wbHealthBarText"></span>
+                <button id="wbHealthBarViewBtn" type="button" class="wb-health-bar-view">View</button>
+                <button id="wbHealthBarDismissBtn" type="button" class="wb-health-bar-dismiss" aria-label="Dismiss">&times;</button>
+              </div>
+            </div>
+            <div id="workbenchRenderOverlay" class="workbench-render-overlay hidden" aria-live="polite" aria-busy="true">
+              <div class="workbench-render-card">
+                <div class="workbench-render-spinner" aria-hidden="true"></div>
+                <p id="workbenchRenderText">Rendering page...</p>
+              </div>
+            </div>
+            <iframe
+              id="workbenchFrame"
+              title="Template Workbench"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+              referrerpolicy="no-referrer"
+            ></iframe>
+          </div>
+        </div>
+        <section id="finalExportView" class="final-export-view hidden" aria-label="Final output">
+          <div class="final-export-head">
+            <h3>Final Code</h3>
+            <div class="final-export-actions">
+              <span id="finalCodeLoading" class="final-code-loading hidden" aria-live="polite">Loading final code...</span>
+              <button id="finalExportBackBtn" type="button" class="btn">Back to Editor</button>
+              <button id="copyHtmlBtn" type="button" class="btn">Copy HTML</button>
+              <button id="downloadBundleBtn" type="button" class="btn btn-primary">Download Code</button>
+            </div>
+          </div>
+          <section id="inlineCodeOutput" class="inline-code-output hidden" aria-label="Generated code output">
+            <div class="inline-code-block">
+              <h3>HTML</h3>
+              <textarea id="finalHtmlOutput" readonly rows="7"></textarea>
+            </div>
+            <div class="inline-code-block">
+              <h3>CSS</h3>
+              <textarea id="finalCssOutput" readonly rows="7"></textarea>
+            </div>
+            <div class="inline-code-block">
+              <h3>JS</h3>
+              <textarea id="finalJsOutput" readonly rows="7"></textarea>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="inlineFindReplaceModal" class="inline-find-replace-modal hidden" role="dialog" aria-modal="true" aria-labelledby="inlineFindReplaceTitle" aria-hidden="true">
+    <div class="inline-find-replace-card">
+      <div class="inline-find-replace-head">
+        <div>
+          <h3 id="inlineFindReplaceTitle">Find &amp; Replace</h3>
+          <p class="inline-find-replace-subtitle">Search and replace inside the current editable HTML.</p>
+        </div>
+        <button id="inlineFindReplaceCloseBtn" type="button" class="inline-find-replace-close" aria-label="Close find and replace">✕</button>
+      </div>
+      <form id="inlineFindReplaceForm" class="inline-find-replace-form">
+        <div class="inline-find-replace-field">
+          <div class="inline-find-replace-field-head">
+            <label class="inline-editor-label" for="inlineFindReplaceFindInput">Find</label>
+            <div class="inline-find-replace-toggle-row" role="group" aria-label="Find options">
+              <button id="inlineFindReplaceMatchCaseBtn" type="button" class="inline-find-replace-toggle" aria-pressed="false" title="Match Case">Aa</button>
+              <button id="inlineFindReplaceWholeWordBtn" type="button" class="inline-find-replace-toggle" aria-pressed="false" title="Whole Word">ab</button>
+              <button id="inlineFindReplaceRegexBtn" type="button" class="inline-find-replace-toggle" aria-pressed="false" title="Use Regular Expression">.*</button>
+            </div>
+          </div>
+          <div class="inline-find-replace-find-row">
+            <input id="inlineFindReplaceFindInput" class="inline-find-replace-input" type="text" spellcheck="false" placeholder="Enter text, link URL, or media URL to find">
+            <div class="inline-find-replace-nav">
+              <span id="inlineFindReplaceCount" class="inline-find-replace-count">No results</span>
+              <button id="inlineFindReplacePrevBtn" type="button" class="inline-find-replace-nav-btn" aria-label="Find previous match">↑</button>
+              <button id="inlineFindReplaceNextBtn" type="button" class="inline-find-replace-nav-btn" aria-label="Find next match">↓</button>
+            </div>
+          </div>
+        </div>
+        <div class="inline-find-replace-field inline-find-replace-field--replace">
+          <label class="inline-editor-label" for="inlineFindReplaceReplaceInput">Replace With</label>
+          <div class="inline-find-replace-replace-row">
+            <input id="inlineFindReplaceReplaceInput" class="inline-find-replace-input" type="text" spellcheck="false" placeholder="Enter the replacement value">
+            <div class="inline-editor-actions inline-find-replace-actions">
+              <button id="inlineFindReplaceFindAllBtn" type="button" class="btn btn-muted">Find All</button>
+              <button id="inlineFindReplaceReplaceOneBtn" type="button" class="btn">Replace</button>
+              <button id="inlineFindReplaceSubmitBtn" type="submit" class="btn btn-primary">Replace All</button>
+              <button id="inlineFindReplaceCancelBtn" type="button" class="btn">Close</button>
+            </div>
+          </div>
+        </div>
+        <p id="inlineFindReplaceStatus" class="inline-page-meta-helper hidden"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="inlineCmsSubmitModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="inlineCmsSubmitTitle" aria-hidden="true">
+    <div class="inline-cms-submit-card">
+      <span class="stage-loading-spinner inline-cms-submit-spinner" aria-hidden="true"></span>
+      <h3 id="inlineCmsSubmitTitle">Processing your page</h3>
+      <p id="inlineCmsSubmitMessage">Checking page links and media...</p>
+    </div>
+  </div>
+
+  <div id="inlineCmsSuccessModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="inlineCmsSuccessTitle" aria-hidden="true">
+    <div class="inline-cms-success-card">
+      <div class="inline-cms-success-head">
+        <div>
+          <h3 id="inlineCmsSuccessTitle">Page processed successfully</h3>
+          <p id="inlineCmsSuccessMessage" class="inline-cms-success-message"></p>
+        </div>
+        <button id="inlineCmsSuccessCloseBtn" type="button" class="btn">Close</button>
+      </div>
+      <div class="inline-cms-success-body">
+        <p id="inlineCmsSuccessHint" class="inline-cms-success-hint"></p>
+        <a id="inlineCmsSuccessLink" class="btn btn-primary inline-cms-success-link" href="#" target="_blank" rel="noopener noreferrer">Visit Page</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="inlineGetUrlsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="inlineGetUrlsTitle" aria-hidden="true">
+    <div class="inline-get-urls-card">
+      <div class="inline-get-urls-head">
+        <div>
+          <h3 id="inlineGetUrlsTitle">Get URLs</h3>
+          <p id="inlineGetUrlsStatus" class="inline-get-urls-status">Collecting page URLs...</p>
+        </div>
+        <button id="inlineGetUrlsCloseBtn" type="button" class="btn">Close</button>
+      </div>
+      <textarea id="inlineGetUrlsOutput" class="inline-get-urls-output" readonly rows="14" spellcheck="false" placeholder="URLs will appear here..."></textarea>
+      <div class="inline-editor-actions inline-get-urls-actions">
+        <button id="inlineGetUrlsCopyBtn" type="button" class="btn btn-primary">Copy URLs</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="manualPageUrlModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="manualPageUrlTitle" aria-hidden="true">
+    <div class="manual-page-url-card">
+      <div class="inline-get-urls-head">
+        <div>
+          <h3 id="manualPageUrlTitle">Add Page URL</h3>
+          <p id="manualPageUrlStatus" class="inline-get-urls-status">Paste a preview or CMS page URL to temporarily add it to the current product list.</p>
+        </div>
+        <button id="manualPageUrlCloseBtn" type="button" class="btn">Close</button>
+      </div>
+      <label class="inline-editor-label" for="manualPageUrlInput">Page URL</label>
+      <input id="manualPageUrlInput" class="manual-page-url-input" type="text" spellcheck="false" placeholder="https://prezohoweb.zoho.com/marketingplus/marketing-channel.html">
+      <div class="inline-editor-actions inline-get-urls-actions">
+        <button id="manualPageUrlSubmitBtn" type="button" class="btn btn-primary">Add to List</button>
+        <button id="manualPageUrlCancelBtn" type="button" class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="helpDocsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpDocsTitle" aria-hidden="true">
+    <div class="modal-card help-docs-modal-card">
+      <div class="modal-head help-docs-modal-head">
+        <div class="help-docs-modal-title">
+          <p class="help-docs-kicker">webMaster Guides</p>
+          <h2 id="helpDocsTitle">webMaster User Guide</h2>
+        </div>
+        <button id="closeHelpDocsBtn" type="button" class="btn">Close</button>
+      </div>
+      <div id="helpDocsBody" class="help-docs-body"></div>
+    </div>
+  </div>
+
+  <!-- AI Section Edit Panel -->
+  <div id="aiSectionPanel" class="ai-section-panel modal hidden" role="dialog" aria-modal="true" aria-labelledby="aiSectionPanelTitle" aria-hidden="true">
+    <div class="ai-section-card">
+      <div class="ai-section-head">
+        <div>
+          <div id="aiSectionKicker" class="ai-section-kicker">
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 1.5L9.4 5.8 14 7.5 9.4 9.2 8 13.5 6.6 9.2 2 7.5 6.6 5.8 8 1.5Z" fill="currentColor"/></svg>
+            <span id="aiSectionKickerText">AI Section Edit</span>
+          </div>
+          <h3 id="aiSectionPanelTitle" class="ai-section-title">Edit this section with AI</h3>
+          <p id="aiSectionScopeNote" class="ai-section-scope-note">Only the selected section will change.</p>
+        </div>
+        <button id="aiSectionCloseBtn" type="button" class="btn" aria-label="Close AI section panel">Close</button>
+      </div>
+      <div class="ai-section-body">
+        <div id="aiSectionTargetChip" class="ai-section-target-chip hidden" aria-live="polite"></div>
+        <label id="aiSectionPromptLabel" class="inline-editor-label" for="aiSectionPrompt">What changes do you want?</label>
+        <textarea id="aiSectionPrompt" class="ai-section-textarea" rows="3" placeholder="e.g. Add a pricing table with 3 tiers, highlight the Pro plan. Change the heading color to match our brand."></textarea>
+        <div class="ai-section-upload-row">
+          <label class="ai-section-upload-label" for="aiSectionFileInput">
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 13V7M10 7L7.5 9.5M10 7L12.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16h10M3 12.5A3.5 3.5 0 016.5 9a3.5 3.5 0 016.98-.49A2.5 2.5 0 0117 11a2.5 2.5 0 01-2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Attach files
+            <input id="aiSectionFileInput" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.svg,.figma,.zip,.json,.html,.css,.txt" class="ai-file-input-hidden">
+          </label>
+          <div id="aiSectionFileList" class="ai-workbench-file-list"></div>
+        </div>
+        <input type="hidden" id="aiSectionOriginalHtml">
+        <div id="aiSectionError" class="ai-workbench-error hidden"></div>
+        <div id="aiSectionLoader" class="ai-section-loader hidden" aria-live="polite">
+          <div class="ai-loader-ring ai-loader-ring-sm"></div>
+          <span>Generating...</span>
+        </div>
+        <div class="ai-section-actions">
+          <button id="aiSectionGenerateBtn" type="button" class="ai-section-generate-btn">
+            <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:13px;height:13px;flex-shrink:0"><path d="M8 1.5L9.4 5.8 14 7.5 9.4 9.2 8 13.5 6.6 9.2 2 7.5 6.6 5.8 8 1.5Z" fill="currentColor"/></svg>
+            <span id="aiSectionGenerateLabel">Update this section</span>
+          </button>
+          <button id="aiSectionCancelBtn" type="button" class="btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Page Mode Picker Modal ───────────────────────────────────────────── -->
+  <div id="pageModePickerModal" class="modal hidden page-mode-picker-modal" role="dialog" aria-modal="true" aria-labelledby="pageModePickerTitle" aria-hidden="true">
+    <div class="page-mode-picker-card">
+      <button id="pageModePickerCloseBtn" type="button" class="page-mode-picker-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="page-mode-picker-icon-wrap" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="10" width="32" height="28" rx="5" stroke="currentColor" stroke-width="2.4"/>
+          <path d="M15 18h18M15 24h14M15 30h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2 id="pageModePickerTitle" class="page-mode-picker-title">How do you want to work?</h2>
+      <p class="page-mode-picker-subtitle">Choose a mode to start editing this page</p>
+      <div class="page-mode-picker-grid">
+        <button type="button" class="page-mode-option-card" id="pageModePickerContent">
+          <span class="page-mode-option-icon page-mode-option-icon--content" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="m10 34-.8 4.8 4.8-.8L34 18.8l-4-4L10 34Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+              <path d="m31.5 7.5 4 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3 class="page-mode-option-title">Content &amp; Screen</h3>
+          <p class="page-mode-option-desc">Edit text, links, images and page settings</p>
+          <span class="page-mode-option-badge page-mode-option-badge--content">ESSENTIALS</span>
+        </button>
+        <button type="button" class="page-mode-option-card" id="pageModePickerAnimation">
+          <span class="page-mode-option-icon page-mode-option-icon--anim" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 6C24 6 34 14 34 24C34 34 24 41 24 41C24 41 14 34 14 24C14 14 24 6 24 6Z" stroke="currentColor" stroke-width="2.4" fill="none"/>
+              <circle cx="24" cy="24" r="4" fill="currentColor"/>
+              <path d="M8 24H11M37 24H40M24 9V12M24 36V39" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3 class="page-mode-option-title">Animation</h3>
+          <p class="page-mode-option-desc">Add scroll-triggered animations to elements</p>
+          <span class="page-mode-option-badge page-mode-option-badge--anim">ANIMATE</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Onboarding Overlay ───────────────────────────────────────────────── -->
+  <div id="onboardingOverlay" class="onboarding-overlay hidden" aria-label="Get started with webMaster">
+    <!-- Step 1: Choose Product -->
+    <div id="onboardingStep1" class="onboarding-step">
+      <div class="onboarding-card">
+        <div class="onboarding-brand" aria-label="webMaster">
+          <span class="onboarding-brand-mark" aria-hidden="true">
+            <img src="/sites/oweb/images/pos/images/webmaster-mark.png" data-wm-img="webmaster-mark.png" alt="" onerror="this.onerror=null;this.src='./assets/webmaster-mark.png';">
+          </span>
+          <span class="onboarding-brand-wordmark">web<span>Master</span></span>
+        </div>
+        <div class="onboarding-heading">
+          <h2 class="onboarding-title">Which product are you working on?</h2>
+          <p class="onboarding-subtitle">Select a product to get started</p>
+        </div>
+        <div class="onboarding-product-select-wrap">
+          <select id="onboardingProductSelect" class="onboarding-product-select" aria-label="Select product"></select>
+          <button id="onboardingProductContinueBtn" type="button" class="btn btn-primary onboarding-continue-btn">
+            Continue
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12M11 4l6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Step 2: Choose Mode -->
+    <div id="onboardingStep2" class="onboarding-step hidden">
+      <div class="onboarding-card">
+        <button id="onboardingBackBtn" type="button" class="onboarding-back-btn" aria-label="Go back to product selection">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <div class="onboarding-brand" aria-label="webMaster">
+          <span class="onboarding-brand-mark" aria-hidden="true">
+            <img src="/sites/oweb/images/pos/images/webmaster-mark.png" data-wm-img="webmaster-mark.png" alt="" onerror="this.onerror=null;this.src='./assets/webmaster-mark.png';">
+          </span>
+          <span class="onboarding-brand-wordmark">web<span>Master</span></span>
+        </div>
+        <div class="onboarding-heading">
+          <h2 class="onboarding-title">What do you want to do?</h2>
+          <p class="onboarding-subtitle">Working on <strong id="onboardingSelectedProductName">—</strong></p>
+        </div>
+        <div class="onboarding-mode-grid">
+          <button type="button" class="onboarding-mode-card onboarding-mode-card--library" data-onboarding-mode="existing">
+            <span class="onboarding-mode-icon onboarding-mode-icon--existing" aria-hidden="true">
+              <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="7" y="9" width="42" height="38" rx="6" fill="url(#lib-bg)" opacity="0.18"/>
+                <rect x="11" y="13" width="34" height="30" rx="4" stroke="currentColor" stroke-width="2.2"/>
+                <path d="M18 21h20M18 28h16M18 35h11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="lib-bg" x1="7" y1="9" x2="49" y2="47" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4b4df7"/>
+                    <stop offset="1" stop-color="#818cf8"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            <div class="onboarding-mode-text">
+              <span class="onboarding-mode-badge onboarding-mode-badge--library">PAGE LIBRARY</span>              <h3 class="onboarding-mode-title">Existing Pages</h3>
+              <p class="onboarding-mode-desc">Browse, edit and manage your current pages</p>
+            </div>
+          </button>
+          <button type="button" class="onboarding-mode-card onboarding-mode-card--ai" data-onboarding-mode="create">
+            <span class="onboarding-mode-icon onboarding-mode-icon--create" aria-hidden="true">
+              <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="5" width="46" height="46" rx="12" fill="url(#ai-bg)" opacity="0.15"/>
+                <path d="M28 10L31.8 21.2L43 25L31.8 28.8L28 40L24.2 28.8L13 25L24.2 21.2L28 10Z" fill="url(#ai-star)" />
+                <circle cx="41" cy="14" r="3.5" fill="#a78bfa" opacity="0.7"/>
+                <circle cx="14" cy="42" r="2.5" fill="#818cf8" opacity="0.55"/>
+                <circle cx="42" cy="40" r="2" fill="#c4b5fd" opacity="0.5"/>
+                <defs>
+                  <linearGradient id="ai-bg" x1="5" y1="5" x2="51" y2="51" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#6366f1"/>
+                    <stop offset="1" stop-color="#a78bfa"/>
+                  </linearGradient>
+                  <linearGradient id="ai-star" x1="13" y1="10" x2="43" y2="40" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#6366f1"/>
+                    <stop offset="1" stop-color="#a78bfa"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            <div class="onboarding-mode-text">
+              <span class="onboarding-mode-badge onboarding-mode-badge--ai">AI</span>
+              <h3 class="onboarding-mode-title">Create New Page</h3>
+              <p class="onboarding-mode-desc">Build a new page from scratch with AI</p>
+            </div>
+          </button>
+          <button type="button" class="onboarding-mode-card onboarding-mode-card--audit" data-onboarding-mode="audit">
+            <span class="onboarding-mode-icon onboarding-mode-icon--audit" aria-hidden="true">
+              <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="5" width="46" height="46" rx="12" fill="url(#aud-bg)" opacity="0.15"/>
+                <rect x="11" y="28" width="7" height="16" rx="2" fill="url(#aud-bar1)"/>
+                <rect x="24" y="18" width="7" height="26" rx="2" fill="url(#aud-bar2)"/>
+                <rect x="37" y="22" width="7" height="22" rx="2" fill="url(#aud-bar3)"/>
+                <circle cx="38" cy="16" r="7" fill="url(#aud-bg)" opacity="0.3" stroke="url(#aud-bar1)" stroke-width="2"/>
+                <path d="M35 16h6M38 13v6" stroke="url(#aud-bar1)" stroke-width="1.8" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="aud-bg" x1="5" y1="5" x2="51" y2="51" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#0ea5e9"/>
+                    <stop offset="1" stop-color="#6366f1"/>
+                  </linearGradient>
+                  <linearGradient id="aud-bar1" x1="11" y1="28" x2="18" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#0ea5e9"/>
+                    <stop offset="1" stop-color="#6366f1"/>
+                  </linearGradient>
+                  <linearGradient id="aud-bar2" x1="24" y1="18" x2="31" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#38bdf8"/>
+                    <stop offset="1" stop-color="#818cf8"/>
+                  </linearGradient>
+                  <linearGradient id="aud-bar3" x1="37" y1="22" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#0ea5e9"/>
+                    <stop offset="1" stop-color="#6366f1"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            <div class="onboarding-mode-text">
+              <span class="onboarding-mode-badge onboarding-mode-badge--audit">AUDIT</span>
+              <h3 class="onboarding-mode-title">Product Audit</h3>
+              <p class="onboarding-mode-desc">Scan and fix SEO, links &amp; content issues</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js?v=webmaster-20261016-39"></script>
+</body>
+</html>
