@@ -183,6 +183,7 @@ export default function App() {
     if (!repo || !currentFile) return setNotice({ kind: "error", text: "Connect a repository and open an HTML page first." });
     if (!user) return setNotice({ kind: "error", text: "Sign in with your account to save drafts to the database." });
     setLoading(true);
+    let gitCommitted = false;
     try {
       const content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
       let projectId = savedProjectId;
@@ -214,6 +215,7 @@ export default function App() {
         return;
       }
       const result = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
+      gitCommitted = true;
       const updated = { ...currentFile, content, sha: result.fileSha };
       setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
       if (user) {
@@ -244,7 +246,8 @@ export default function App() {
       }
       setNotice({ kind: "ok", text: `Committed ${currentFile.path} to ${repo.branch}.${result.commitSha ? ` Commit: ${result.commitSha.slice(0, 8)}` : ""}` });
     } catch (error) {
-      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Git commit failed. Check token permissions." });
+      const detail = error instanceof Error ? error.message : "Unknown error";
+      setNotice({ kind: "error", text: gitCommitted ? `Git commit succeeded, but database history could not be saved: ${detail}` : detail });
     } finally { setLoading(false); }
   }
 
