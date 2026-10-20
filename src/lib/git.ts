@@ -128,5 +128,5 @@ export async function commitRepositoryFile(repo: RepoInfo, token: string, file: 
 export function rawBaseUrl(repo: RepoInfo, filePath: string) {
   const directory = filePath.split("/").slice(0, -1).join("/");
   if (repo.provider === "github") return `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/${repo.branch.split("/").map(encodeURIComponent).join("/")}/${directory ? directory + "/" : ""}`;
-  return `https://gitlab.com/${repo.owner}/${repo.name}/-/raw/${encodeURIComponent(repo.branch)}/${directory ? directory + "/" : ""}`;
+  return `https://gitlab.com/${repo.owner}/${repo.name}/-/raw/${repo.branch.split("/").map(encodeURIComponent).join("/")}/${directory ? directory + "/" : ""}`;
 }
