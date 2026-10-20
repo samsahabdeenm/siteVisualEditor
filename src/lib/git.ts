@@ -9,6 +9,7 @@ export type RepoInfo = {
 };
 
 export type RepoFile = { path: string; type: "blob" | "tree"; size?: number };
+export type AccessibleRepository = { url: string; label: string; owner: string; name: string; defaultBranch: string; provider: GitProvider };
 
 function cleanPath(value: string) {
   return value.replace(/^\/+|\/+$/g, "");
@@ -24,6 +25,34 @@ export function parseRepositoryUrl(input: string, branch: string, root = ""): Re
   }
   if (parts.length < 2) throw new Error("Enter a GitLab project URL such as https://gitlab.com/group/project");
   return { provider, owner: parts.slice(0, -1).join("/"), name: parts[parts.length - 1].replace(/\.git$/, ""), branch: branch.trim() || "main", root: cleanPath(root) };
+}
+
+export async function listAccessibleRepositories(provider: GitProvider, token: string): Promise<AccessibleRepository[]> {
+  if (!token.trim()) throw new Error("Connect your Git account first.");
+  if (provider === "github") {
+    const all: any[] = [];
+    for (let page = 1; page <= 5; page++) {
+      const response = await checkedFetch("https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=" + page, { headers: { Authorization: "Bearer " + token, Accept: "application/vnd.github+json" } });
+      const batch = await response.json();
+      all.push(...batch);
+      if (batch.length < 100) break;
+    }
+    return all.filter((item: any) => item.full_name && !item.archived).map((item: any) => ({
+      url: item.html_url, label: item.full_name, owner: item.owner?.login || item.full_name.split("/").slice(0, -1).join("/"),
+      name: item.name, defaultBranch: item.default_branch || "main", provider
+    }));
+  }
+  const all: any[] = [];
+  for (let page = 1; page <= 5; page++) {
+    const response = await checkedFetch("https://gitlab.com/api/v4/projects?membership=true&simple=true&order_by=last_activity_at&per_page=100&page=" + page, { headers: { "PRIVATE-TOKEN": token } });
+    const batch = await response.json();
+    all.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return all.filter((item: any) => item.path_with_namespace && !item.archived).map((item: any) => {
+    const parts = item.path_with_namespace.split("/");
+    return { url: item.web_url, label: item.path_with_namespace, owner: parts.slice(0, -1).join("/"), name: item.path, defaultBranch: item.default_branch || "main", provider };
+  });
 }
 
 function apiRoot(repo: RepoInfo) {
