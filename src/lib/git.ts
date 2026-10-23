@@ -159,3 +159,25 @@ export function rawBaseUrl(repo: RepoInfo, filePath: string) {
   if (repo.provider === "github") return `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/${repo.branch.split("/").map(encodeURIComponent).join("/")}/${directory ? directory + "/" : ""}`;
   return `https://gitlab.com/${repo.owner}/${repo.name}/-/raw/${repo.branch.split("/").map(encodeURIComponent).join("/")}/${directory ? directory + "/" : ""}`;
 }
+
+
+export type RepositoryAsset = { path: string; contentBase64: string; previewUrl: string; mimeType: string; name: string };
+
+export async function commitRepositoryAsset(repo: RepoInfo, token: string, asset: RepositoryAsset, message: string) {
+  if (repo.provider === "github") {
+    const response = await checkedFetch(`${apiRoot(repo)}/contents/${asset.path.split("/").map(encodeURIComponent).join("/")}`, {
+      method: "PUT",
+      headers: headers(repo, token, true),
+      body: JSON.stringify({ message, content: asset.contentBase64, branch: repo.branch })
+    });
+    const data = await response.json();
+    return { commitSha: data.commit?.sha as string | undefined, fileSha: data.content?.sha as string | undefined };
+  }
+  const response = await checkedFetch(`${apiRoot(repo)}/repository/files/${encodeURIComponent(asset.path)}`, {
+    method: "POST",
+    headers: headers(repo, token, true),
+    body: JSON.stringify({ branch: repo.branch, content: asset.contentBase64, commit_message: message, encoding: "base64" })
+  });
+  const data = await response.json();
+  return { commitSha: data.commit_id as string | undefined, fileSha: undefined };
+}
