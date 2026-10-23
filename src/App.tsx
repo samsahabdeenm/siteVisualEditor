@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "./lib/supabase";
-import { commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
+import { commitRepositoryAsset, commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
 import type { AccessibleRepository, GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
 import { detectFramework } from "./lib/frameworkAdapters";
 
@@ -94,6 +94,7 @@ export default function App() {
   const [savedProjectId, setSavedProjectId] = useState<string | null>(null);
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commitMessage, setCommitMessage] = useState("Update website with visual editor");
+  const [stagedAssets, setStagedAssets] = useState<Array<{ path: string; contentBase64: string; previewUrl: string; mimeType: string; name: string }>>([]);
   const [showConnect, setShowConnect] = useState(true);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const htmlResultResolve = useRef<((html: string) => void) | null>(null);
@@ -333,6 +334,27 @@ export default function App() {
     });
   }
 
+  async function stageImageReplacement(file: File) {
+    if (!repo || !currentFile) return setNotice({ kind: "error", text: "Open a page and connect a repository before replacing an image." });
+    if (!file.type.startsWith("image/")) return setNotice({ kind: "error", text: "Choose an image file (PNG, JPG, WebP, GIF, SVG)." });
+    if (file.size > 10 * 1024 * 1024) return setNotice({ kind: "error", text: "Please choose an image smaller than 10 MB." });
+    if (selected.tag !== "img") return setNotice({ kind: "info", text: "Select an image in the live preview first, then choose Replace image." });
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const contentBase64 = btoa(binary);
+      const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+      const path = "assets/" + Date.now() + "-" + safeName;
+      const previewUrl = URL.createObjectURL(file);
+      setStagedAssets(existing => [...existing, { path, contentBase64, previewUrl, mimeType: file.type, name: file.name }]);
+      applyPatch({ src: previewUrl });
+      setNotice({ kind: "info", text: "Image staged in the preview. Click “Save changes to Git” to upload it to assets/ and update the page together." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not stage this image." });
+    }
+  }
+
   async function saveDraft() {
     if (!repo || !currentFile) return setNotice({ kind: "error", text: "Connect a repository and open an HTML page first." });
     if (!user) return setNotice({ kind: "error", text: "Sign in with your account to save drafts to the database." });
@@ -362,21 +384,34 @@ export default function App() {
     setLoading(true);
     let gitCommitted = false;
     try {
-      if (!dirty && currentFile.content === originalFile.content) {
+      if (!dirty && currentFile.content === originalFile.content && stagedAssets.length === 0) {
         setNotice({ kind: "info", text: "No source changes detected. Edit an element before committing." });
         setLoading(false);
         return;
       }
-      const content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
-      if (content === originalFile.content) {
+      let content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
+      const uploadedAssets: string[] = [];
+      for (const asset of stagedAssets) {
+        await commitRepositoryAsset(repo, token.trim(), asset, `Add website asset: ${asset.name}`);
+        uploadedAssets.push(asset.path);
+        const pageDirectory = currentFile.path.split("/").slice(0, -1).filter(Boolean);
+        const relativePath = [...Array(Math.max(0, pageDirectory.length)).fill(".."), asset.path].join("/");
+        content = content.split(asset.previewUrl).join(relativePath);
+      }
+      if (content === originalFile.content && uploadedAssets.length === 0) {
         setNotice({ kind: "info", text: "No source changes detected. Edit an element before committing." });
         setLoading(false);
         return;
       }
-      const result = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
-      gitCommitted = true;
+      let result: { commitSha?: string; fileSha?: string } = {};
+      if (content !== originalFile.content || dirty) {
+        result = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
+        gitCommitted = true;
+      } else if (uploadedAssets.length) {
+        gitCommitted = true;
+      }
       const updated = { ...currentFile, content, sha: result.fileSha };
-      setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
+      setCurrentFile(updated); setOriginalFile(updated); setDirty(false);\n      setStagedAssets([]);
       if (user) {
         let projectId = savedProjectId;
         if (!projectId) {
@@ -403,7 +438,7 @@ export default function App() {
         const { error: revisionError } = await supabase.from("visual_editor_revisions").insert({ project_id: projectId, owner_id: user.id, label: `Commit · ${currentFile.path}`, status: "committed", snapshot: { path: currentFile.path, content, savedAt: new Date().toISOString() }, changed_files: [currentFile.path], commit_sha: result.commitSha || null });
         if (revisionError) throw revisionError;
       }
-      setNotice({ kind: "ok", text: `Committed ${currentFile.path} to ${repo.branch}.${result.commitSha ? ` Commit: ${result.commitSha.slice(0, 8)}` : ""}` });
+      setNotice({ kind: "ok", text: `Saved ${uploadedAssets.length} image asset(s) and updated ${currentFile.path} on ${repo.branch}.${result.commitSha ? ` Commit: ${result.commitSha.slice(0, 8)}` : ""}` });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown error";
       setNotice({ kind: "error", text: gitCommitted ? `Git commit succeeded, but database history could not be saved: ${detail}` : detail });
@@ -486,12 +521,12 @@ export default function App() {
             <div className="panel-title"><div><span className="eyebrow">SELECTED ELEMENT</span><h3>{selected.tag ? `<${selected.tag}>` : "Nothing selected"}</h3></div>{selected.tag && <span className="element-badge">{selected.tag.toUpperCase()}</span>}</div>
             {!selected.tag ? <div className="select-hint"><div className="target-icon">⌖</div><b>Select an element</b><p>Click text, image, button or section in the preview to edit its existing attributes and styles.</p></div> : <>
               <section className="property-section"><h4>CONTENT</h4>{!["img","input","video","audio","source","br","hr"].includes(selected.tag) && <><label htmlFor="prop-text">Text content</label><textarea id="prop-text" rows={3} value={selected.text} onChange={e => applyPatch({ text: e.target.value })} /></>}
-                {["a","img","source","video","audio"].includes(selected.tag) && <><label htmlFor="prop-link">{selected.tag === "img" ? "Image source URL" : "Link / source URL"}</label><input id="prop-link" value={selected.tag === "img" ? selected.src : selected.href} onChange={e => applyPatch(selected.tag === "img" ? { src: e.target.value } : { href: e.target.value })} placeholder="https://…" />{selected.tag === "img" && <><label htmlFor="prop-alt">Alternative text</label><input id="prop-alt" value={selected.alt} onChange={e => applyPatch({ alt: e.target.value })} /></>}</>}
+                {["a","img","source","video","audio"].includes(selected.tag) && <><label htmlFor="prop-link">{selected.tag === "img" ? "Image source URL" : "Link / source URL"}</label><input id="prop-link" value={selected.tag === "img" ? selected.src : selected.href} onChange={e => applyPatch(selected.tag === "img" ? { src: e.target.value } : { href: e.target.value })} placeholder="https://…" />{selected.tag === "img" && <><label htmlFor="prop-alt">Alternative text</label><input id="prop-alt" value={selected.alt} onChange={e => applyPatch({ alt: e.target.value })} /><label htmlFor="replace-image-file">Replace image from your device</label><input id="replace-image-file" type="file" accept="image/*" onChange={e => { const file = e.target.files?.[0]; if (file) void stageImageReplacement(file); e.currentTarget.value = ""; }} /><small className="helper">{stagedAssets.length ? `${stagedAssets.length} image(s) staged — they upload when you save changes.` : "Images are staged locally first; Save changes uploads them to the repository assets/ folder."}</small></>}</>}
               </section>
               <section className="property-section"><h4>APPEARANCE</h4><div className="field-row"><div><label htmlFor="prop-color">Text color</label><input id="prop-color" value={selected.color} onChange={e => applyPatch({ color: e.target.value })} placeholder="#222 or CSS" /></div><div><label htmlFor="prop-bg">Background</label><input id="prop-bg" value={selected.backgroundColor} onChange={e => applyPatch({ backgroundColor: e.target.value })} placeholder="#fff or CSS" /></div></div><div className="field-row"><div><label htmlFor="prop-font">Font size</label><input id="prop-font" value={selected.fontSize} onChange={e => applyPatch({ fontSize: e.target.value })} placeholder="16px" /></div><div><label htmlFor="prop-width">Width</label><input id="prop-width" value={selected.width} onChange={e => applyPatch({ width: e.target.value })} placeholder="100% / auto" /></div></div><div className="field-row"><div><label htmlFor="prop-margin">Margin</label><input id="prop-margin" value={selected.margin} onChange={e => applyPatch({ margin: e.target.value })} placeholder="16px 0" /></div><div><label htmlFor="prop-padding">Padding</label><input id="prop-padding" value={selected.padding} onChange={e => applyPatch({ padding: e.target.value })} placeholder="12px" /></div></div><label htmlFor="prop-align">Text alignment</label><select id="prop-align" value={selected.textAlign} onChange={e => applyPatch({ textAlign: e.target.value })}><option value="">Theme default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></section>
               <section className="property-section"><h4>SECTION ACTIONS</h4><p className="helper">These actions affect the selected element and its nested content.</p><div className="action-row"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-up" }, "*"); setDirty(true); }}>↑ Move up</button><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-down" }, "*"); setDirty(true); }}>↓ Move down</button></div><div className="action-row section-actions"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-duplicate" }, "*"); setDirty(true); }}>▢ Clone</button><button className="button danger" onClick={() => { if (window.confirm("Remove this element from the page preview? This change is not committed until you save it.")) { frameRef.current?.contentWindow?.postMessage({ type: "ve-remove" }, "*"); setSelected(emptyElement); setDirty(true); } }}>⌫ Remove</button></div></section>
             </>}
-            <div className="panel-save"><button className="button primary full" disabled={loading || !currentFile || !user} onClick={saveDraft}>{loading ? "Saving…" : "▣ Save draft to database"}</button><small>{user ? "Saves a version snapshot to your private workspace." : "Sign in below to enable database drafts."}</small><button className="button subtle full" disabled={loading || !currentFile} onClick={saveToGit}>↥ Commit changes to Git</button></div>
+            <div className="panel-save"><button className="button primary full" disabled={loading || !currentFile || !user} onClick={saveDraft}>{loading ? "Saving…" : "▣ Save draft to database"}</button><small>{user ? "Saves a version snapshot to your private workspace." : "Sign in below to enable database drafts."}</small><button className="button subtle full" disabled={loading || !currentFile} onClick={saveToGit}>↥ Save changes to Git</button></div>
           </div>
           <div id="account-panel" className="account-panel"><div className="account-title"><span className="database-icon">▤</span><div><b>Database workspace</b><small>{user ? "Signed in" : "Sign in to save drafts"}</small></div></div>
             {user ? <div className="account-signed"><span className="account-check">✓</span><span>Draft history is enabled for {user.email}.</span></div> : <><input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="Email address" autoComplete="email" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 6 characters)" autoComplete="current-password" /><div className="action-row"><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signin")}>Sign in</button><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signup")}>Create account</button></div></>}
