@@ -323,9 +323,13 @@ export default function App() {
       setNotice({ kind: "error", text: "Choose an image file (PNG, JPG, WebP, GIF or SVG)." });
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      setNotice({ kind: "error", text: "Choose an image smaller than 10 MB for direct Git upload." });
+      return;
+    }
     const previewUrl = URL.createObjectURL(file);
     const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
-    const repoPath = "assets/visual-editor-" + Date.now() + "-" + safeName;
+    const repoPath = (repo.root ? repo.root + "/" : "") + "assets/visual-editor-" + Date.now() + "-" + safeName;
     setStagedAssets(items => [...items, { file, previewUrl, repoPath }]);
     applyPatch({ src: previewUrl });
     setNotice({ kind: "info", text: "Image staged in preview. Save Changes will upload it to the repository assets/ folder and update this page." });
