@@ -69,6 +69,13 @@ function inferFramework(files: RepoFile[]) {
   return detectFramework(files).label;
 }
 
+function relativeRepoAssetUrl(fromFilePath: string, assetPath: string) {
+  const from = fromFilePath.split("/").slice(0, -1).filter(Boolean);
+  const to = assetPath.split("/").filter(Boolean);
+  while (from.length && to.length && from[0] === to[0]) { from.shift(); to.shift(); }
+  return [...from.map(() => ".."), ...to].join("/");
+}
+
 export default function App() {
   const [provider, setProvider] = useState<GitProvider>("github");
   const [repoUrl, setRepoUrl] = useState("");
@@ -390,7 +397,7 @@ export default function App() {
       let content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
       for (const asset of stagedAssets) {
         await uploadRepositoryAsset(repo, token.trim(), asset.repoPath, asset.file, "Upload visual editor asset: " + asset.file.name);
-        content = content.split(asset.previewUrl).join("/" + asset.repoPath);
+        content = content.split(asset.previewUrl).join(relativeRepoAssetUrl(currentFile.path, asset.repoPath));
       }
       if (content === originalFile.content && stagedAssets.length === 0) {
         setNotice({ kind: "info", text: "No source changes detected. Edit an element before committing." });
@@ -401,6 +408,7 @@ export default function App() {
       gitCommitted = true;
       const updated = { ...currentFile, content, sha: result.fileSha };
       setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
+      if (/\.html?$/i.test(currentFile.path)) setFrameHtml(buildPreview(content, repo, currentFile.path));
       stagedAssets.forEach(asset => URL.revokeObjectURL(asset.previewUrl));
       setStagedAssets([]);
       if (user) {
