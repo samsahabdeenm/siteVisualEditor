@@ -31,7 +31,7 @@ export async function listAccessibleRepositories(provider: GitProvider, token: s
   if (!token.trim()) throw new Error("Connect your Git account first.");
   if (provider === "github") {
     const all: any[] = [];
-    for (let page = 1; page <= 5; page++) {
+    for (let page = 1; page <= 100; page++) {
       const response = await checkedFetch("https://api.github.com/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=" + page, { headers: { Authorization: "Bearer " + token, Accept: "application/vnd.github+json" } });
       const batch = await response.json();
       all.push(...batch);
@@ -95,7 +95,7 @@ export async function listRepositoryFiles(repo: RepoInfo, token: string): Promis
   }
   const files: RepoFile[] = [];
   let page = 1;
-  while (page <= 10) {
+  while (page <= 100) {
     const url = `${apiRoot(repo)}/repository/tree?ref=${encodeURIComponent(repo.branch)}&recursive=true&per_page=100&page=${page}`;
     const response = await checkedFetch(url, { headers: headers(repo, token) });
     const batch = await response.json();
