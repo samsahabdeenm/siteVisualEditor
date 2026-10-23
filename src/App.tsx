@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "./lib/supabase";
-import { commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
+import { commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile, uploadRepositoryAsset } from "./lib/git";
 import type { AccessibleRepository, GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
 import { detectFramework } from "./lib/frameworkAdapters";
 
 type SelectedElement = { id: string; tag: string; text: string; href: string; src: string; alt: string; color: string; backgroundColor: string; fontSize: string; margin: string; padding: string; width: string; textAlign: string };
 type Notice = { kind: "ok" | "error" | "info"; text: string } | null;
+type StagedAsset = { file: File; previewUrl: string; repoPath: string };
 
 const runtime = `
 <script id="__site_visual_editor_runtime">
@@ -94,6 +95,7 @@ export default function App() {
   const [savedProjectId, setSavedProjectId] = useState<string | null>(null);
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commitMessage, setCommitMessage] = useState("Update website with visual editor");
+  const [stagedAssets, setStagedAssets] = useState<StagedAsset[]>([]);
   const [showConnect, setShowConnect] = useState(true);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const htmlResultResolve = useRef<((html: string) => void) | null>(null);
@@ -315,6 +317,20 @@ export default function App() {
     } finally { setLoading(false); }
   }
 
+  function stageImageReplacement(file?: File) {
+    if (!file || !repo || selected.tag !== "img") return;
+    if (!file.type.startsWith("image/")) {
+      setNotice({ kind: "error", text: "Choose an image file (PNG, JPG, WebP, GIF or SVG)." });
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+    const repoPath = "assets/visual-editor-" + Date.now() + "-" + safeName;
+    setStagedAssets(items => [...items, { file, previewUrl, repoPath }]);
+    applyPatch({ src: previewUrl });
+    setNotice({ kind: "info", text: "Image staged in preview. Save Changes will upload it to the repository assets/ folder and update this page." });
+  }
+
   function applyPatch(patch: Partial<SelectedElement>) {
     const next = { ...selected, ...patch };
     setSelected(next);
@@ -367,8 +383,12 @@ export default function App() {
         setLoading(false);
         return;
       }
-      const content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
-      if (content === originalFile.content) {
+      let content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
+      for (const asset of stagedAssets) {
+        await uploadRepositoryAsset(repo, token.trim(), asset.repoPath, asset.file, "Upload visual editor asset: " + asset.file.name);
+        content = content.split(asset.previewUrl).join("/" + asset.repoPath);
+      }
+      if (content === originalFile.content && stagedAssets.length === 0) {
         setNotice({ kind: "info", text: "No source changes detected. Edit an element before committing." });
         setLoading(false);
         return;
@@ -377,6 +397,8 @@ export default function App() {
       gitCommitted = true;
       const updated = { ...currentFile, content, sha: result.fileSha };
       setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
+      stagedAssets.forEach(asset => URL.revokeObjectURL(asset.previewUrl));
+      setStagedAssets([]);
       if (user) {
         let projectId = savedProjectId;
         if (!projectId) {
@@ -440,7 +462,7 @@ export default function App() {
         <div className="topbar-center"><span className="status-dot" /> Existing website editor <span className="topbar-separator">/</span> <span className="muted">{repo ? `${repo.owner}/${repo.name}` : "No repository connected"}</span></div>
         <div className="topbar-actions">
           {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={async () => { await supabase.auth.signOut(); setToken(""); setAccessibleRepos([]); }}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
-          <button className="button primary small" disabled={loading || !currentFile} onClick={saveToGit}>{loading ? "Working…" : "↥ Commit to Git"}</button>
+          <button className="button primary small" disabled={loading || !currentFile} onClick={saveToGit}>{loading ? "Working…" : "Save Changes · Push to Git"}</button>
         </div>
       </header>
 
@@ -486,7 +508,7 @@ export default function App() {
             <div className="panel-title"><div><span className="eyebrow">SELECTED ELEMENT</span><h3>{selected.tag ? `<${selected.tag}>` : "Nothing selected"}</h3></div>{selected.tag && <span className="element-badge">{selected.tag.toUpperCase()}</span>}</div>
             {!selected.tag ? <div className="select-hint"><div className="target-icon">⌖</div><b>Select an element</b><p>Click text, image, button or section in the preview to edit its existing attributes and styles.</p></div> : <>
               <section className="property-section"><h4>CONTENT</h4>{!["img","input","video","audio","source","br","hr"].includes(selected.tag) && <><label htmlFor="prop-text">Text content</label><textarea id="prop-text" rows={3} value={selected.text} onChange={e => applyPatch({ text: e.target.value })} /></>}
-                {["a","img","source","video","audio"].includes(selected.tag) && <><label htmlFor="prop-link">{selected.tag === "img" ? "Image source URL" : "Link / source URL"}</label><input id="prop-link" value={selected.tag === "img" ? selected.src : selected.href} onChange={e => applyPatch(selected.tag === "img" ? { src: e.target.value } : { href: e.target.value })} placeholder="https://…" />{selected.tag === "img" && <><label htmlFor="prop-alt">Alternative text</label><input id="prop-alt" value={selected.alt} onChange={e => applyPatch({ alt: e.target.value })} /></>}</>}
+                {["a","img","source","video","audio"].includes(selected.tag) && <><label htmlFor="prop-link">{selected.tag === "img" ? "Image source URL" : "Link / source URL"}</label><input id="prop-link" value={selected.tag === "img" ? selected.src : selected.href} onChange={e => applyPatch(selected.tag === "img" ? { src: e.target.value } : { href: e.target.value })} placeholder="https://…" />{selected.tag === "img" && <><label htmlFor="prop-alt">Alternative text</label><input id="prop-alt" value={selected.alt} onChange={e => applyPatch({ alt: e.target.value })} /><label htmlFor="prop-image-upload">Replace image file</label><input id="prop-image-upload" type="file" accept="image/*" disabled={!repo || loading} onChange={e => { stageImageReplacement(e.target.files?.[0]); e.currentTarget.value = ""; }} /><p className="helper">{stagedAssets.length ? stagedAssets.length + " image file(s) staged for the next Git save." : "Choose an image to preview it now; it will be uploaded into assets/ when you save changes."}</p></>}</>}
               </section>
               <section className="property-section"><h4>APPEARANCE</h4><div className="field-row"><div><label htmlFor="prop-color">Text color</label><input id="prop-color" value={selected.color} onChange={e => applyPatch({ color: e.target.value })} placeholder="#222 or CSS" /></div><div><label htmlFor="prop-bg">Background</label><input id="prop-bg" value={selected.backgroundColor} onChange={e => applyPatch({ backgroundColor: e.target.value })} placeholder="#fff or CSS" /></div></div><div className="field-row"><div><label htmlFor="prop-font">Font size</label><input id="prop-font" value={selected.fontSize} onChange={e => applyPatch({ fontSize: e.target.value })} placeholder="16px" /></div><div><label htmlFor="prop-width">Width</label><input id="prop-width" value={selected.width} onChange={e => applyPatch({ width: e.target.value })} placeholder="100% / auto" /></div></div><div className="field-row"><div><label htmlFor="prop-margin">Margin</label><input id="prop-margin" value={selected.margin} onChange={e => applyPatch({ margin: e.target.value })} placeholder="16px 0" /></div><div><label htmlFor="prop-padding">Padding</label><input id="prop-padding" value={selected.padding} onChange={e => applyPatch({ padding: e.target.value })} placeholder="12px" /></div></div><label htmlFor="prop-align">Text alignment</label><select id="prop-align" value={selected.textAlign} onChange={e => applyPatch({ textAlign: e.target.value })}><option value="">Theme default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></section>
               <section className="property-section"><h4>SECTION ACTIONS</h4><p className="helper">These actions affect the selected element and its nested content.</p><div className="action-row"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-up" }, "*"); setDirty(true); }}>↑ Move up</button><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-down" }, "*"); setDirty(true); }}>↓ Move down</button></div><div className="action-row section-actions"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-duplicate" }, "*"); setDirty(true); }}>▢ Clone</button><button className="button danger" onClick={() => { if (window.confirm("Remove this element from the page preview? This change is not committed until you save it.")) { frameRef.current?.contentWindow?.postMessage({ type: "ve-remove" }, "*"); setSelected(emptyElement); setDirty(true); } }}>⌫ Remove</button></div></section>
