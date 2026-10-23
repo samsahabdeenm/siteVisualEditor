@@ -160,6 +160,66 @@ export function rawBaseUrl(repo: RepoInfo, filePath: string) {
   return `https://gitlab.com/${repo.owner}/${repo.name}/-/raw/${repo.branch.split("/").map(encodeURIComponent).join("/")}/${directory ? directory + "/" : ""}`;
 }
 
+export async function commitRepositoryChanges(
+  repo: RepoInfo,
+  token: string,
+  file: LoadedFile,
+  assets: Array<{ path: string; file: File }>,
+  message: string
+) {
+  if (repo.provider === "github") {
+    const branchRef = repo.branch.split("/").map(encodeURIComponent).join("/");
+    const refResponse = await checkedFetch(`${apiRoot(repo)}/git/ref/heads/${branchRef}`, { headers: headers(repo, token) });
+    const refData = await refResponse.json();
+    const parentSha = refData.object?.sha as string;
+    const commitResponse = await checkedFetch(`${apiRoot(repo)}/git/commits/${parentSha}`, { headers: headers(repo, token) });
+    const parentCommit = await commitResponse.json();
+    const entries: Array<{ path: string; mode: string; type: string; sha: string }> = [];
+    const createBlob = async (value: string, encoding: "utf-8" | "base64") => {
+      const response = await checkedFetch(`${apiRoot(repo)}/git/blobs`, {
+        method: "POST", headers: headers(repo, token, true),
+        body: JSON.stringify({ content: value, encoding })
+      });
+      const data = await response.json();
+      return data.sha as string;
+    };
+    entries.push({ path: file.path, mode: "100644", type: "blob", sha: await createBlob(file.content, "utf-8") });
+    for (const asset of assets) {
+      const bytes = new Uint8Array(await asset.file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      entries.push({ path: asset.path, mode: "100644", type: "blob", sha: await createBlob(btoa(binary), "base64") });
+    }
+    const treeResponse = await checkedFetch(`${apiRoot(repo)}/git/trees`, {
+      method: "POST", headers: headers(repo, token, true),
+      body: JSON.stringify({ base_tree: parentCommit.tree?.sha, tree: entries })
+    });
+    const treeData = await treeResponse.json();
+    const newCommitResponse = await checkedFetch(`${apiRoot(repo)}/git/commits`, {
+      method: "POST", headers: headers(repo, token, true),
+      body: JSON.stringify({ message, tree: treeData.sha, parents: [parentSha] })
+    });
+    const newCommit = await newCommitResponse.json();
+    await checkedFetch(`${apiRoot(repo)}/git/refs/heads/${branchRef}`, {
+      method: "PATCH", headers: headers(repo, token, true),
+      body: JSON.stringify({ sha: newCommit.sha, force: false })
+    });
+    return { commitSha: newCommit.sha as string | undefined, fileSha: entries[0]?.sha };
+  }
+  const actions = [{ action: "update", file_path: file.path, content: file.content, encoding: "text" }, ...await Promise.all(assets.map(async asset => {
+    const bytes = new Uint8Array(await asset.file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { action: "create", file_path: asset.path, content: btoa(binary), encoding: "base64" };
+  }))];
+  const response = await checkedFetch(`${apiRoot(repo)}/repository/commits`, {
+    method: "POST", headers: headers(repo, token, true),
+    body: JSON.stringify({ branch: repo.branch, commit_message: message, actions })
+  });
+  const data = await response.json();
+  return { commitSha: data.id as string | undefined, fileSha: undefined };
+}
+
 export async function uploadRepositoryAsset(repo: RepoInfo, token: string, path: string, file: File, message: string) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let binary = "";
