@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "./lib/supabase";
-import { commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile, uploadRepositoryAsset } from "./lib/git";
+import { commitRepositoryChanges, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
 import type { AccessibleRepository, GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
 import { detectFramework } from "./lib/frameworkAdapters";
 
@@ -396,7 +396,6 @@ export default function App() {
       }
       let content = /\.html?$/i.test(currentFile.path) ? await requestEditedHtml() : currentFile.content;
       for (const asset of stagedAssets) {
-        await uploadRepositoryAsset(repo, token.trim(), asset.repoPath, asset.file, "Upload visual editor asset: " + asset.file.name);
         content = content.split(asset.previewUrl).join(relativeRepoAssetUrl(currentFile.path, asset.repoPath));
       }
       if (content === originalFile.content && stagedAssets.length === 0) {
@@ -404,7 +403,13 @@ export default function App() {
         setLoading(false);
         return;
       }
-      const result = await commitRepositoryFile(repo, token.trim(), { ...currentFile, content }, commitMessage.trim() || "Update website with visual editor");
+      const result = await commitRepositoryChanges(
+        repo,
+        token.trim(),
+        { ...currentFile, content },
+        stagedAssets.map(asset => ({ path: asset.repoPath, file: asset.file })),
+        commitMessage.trim() || "Update website with visual editor"
+      );
       gitCommitted = true;
       const updated = { ...currentFile, content, sha: result.fileSha };
       setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
