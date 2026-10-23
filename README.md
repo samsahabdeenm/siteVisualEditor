@@ -7,6 +7,7 @@ A Git-connected editor for modifying existing websites without generating new la
 - GitHub and GitLab repository/file adapters.
 - Existing HTML page preview in an isolated iframe.
 - Select elements and edit text, image/link attributes, and common inline styles.
+- Stage image replacements in the local preview; on save, upload the new file into `assets/` and commit the page reference to the selected Git branch.
 - Clone/remove selected elements, preview responsive widths, export HTML, and commit changes to the selected branch.
 - Supabase Auth + database-backed draft snapshots with per-user RLS.
 - Framework detection hints for React/Next/Vite projects; framework-aware JSX editing and build previews are follow-up work, not yet complete.
@@ -29,7 +30,8 @@ The `visual_editor_projects` and `visual_editor_revisions` tables store workspac
 ## Important limitations
 
 - Visual preview/editing currently supports HTML files. CSS/JS/JSX/TSX files are listed and can be inspected, but are not yet edited through framework-aware transforms.
-- The current commit flow writes the opened file to the selected existing branch. Use a feature branch until branch creation and pull/merge request flows are added.
+- Image replacement currently stages the file in the browser preview; saving uploads the asset to `assets/` and then updates the opened HTML file on the selected branch. If the HTML commit fails after the asset upload, the asset may remain as an unused file.
+- The current commit flow writes to the selected existing branch. For customer-facing use, configure the editor to target a review/staging branch so changes can be checked before merging into the live deployment branch.
 - Preview sandbox is isolated but project-authored JavaScript still runs inside that sandbox; only load repositories you trust.
 - Browser-based relative assets depend on the provider's raw-file URL layout and may not perfectly reproduce every framework build.
 - A successful Git commit does not guarantee a live deployment; that depends on the repository's configured deployment pipeline.
@@ -37,4 +39,4 @@ The `visual_editor_projects` and `visual_editor_revisions` tables store workspac
 
 ## Implementation status
 
-This branch is the initial MVP scaffold. Run `npm run build` and exercise provider authentication, HTML editing, database saves, and Git commits before merging or deploying.
+This branch adds a staged customer image-replacement flow on top of the MVP. GitHub Actions build and real GitHub/GitLab + Supabase end-to-end tests are still required before merging or deploying.
