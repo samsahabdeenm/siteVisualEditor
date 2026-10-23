@@ -411,7 +411,8 @@ export default function App() {
         gitCommitted = true;
       }
       const updated = { ...currentFile, content, sha: result.fileSha };
-      setCurrentFile(updated); setOriginalFile(updated); setDirty(false);\n      setStagedAssets([]);
+      setCurrentFile(updated); setOriginalFile(updated); setDirty(false);
+      setStagedAssets([]);
       if (user) {
         let projectId = savedProjectId;
         if (!projectId) {
