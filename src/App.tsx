@@ -20,7 +20,7 @@ function startZenVentoraAuth(mode: "signin" | "signup") {
   window.location.assign(url.toString());
 }
 function readCentralLogoutMarker() {
-  const match = document.cookie.match(/(?:^|;\\s*)zv_central_logout=([^;]+)/);
+  const match = document.cookie.match(/(?:^|;\s*)zv_central_logout=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : "";
 }
 function markCentralLogout() {
