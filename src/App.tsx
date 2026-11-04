@@ -9,6 +9,24 @@ type SelectedElement = { id: string; tag: string; text: string; href: string; sr
 type Notice = { kind: "ok" | "error" | "info"; text: string } | null;
 type StagedAsset = { file: File; previewUrl: string; repoPath: string };
 
+
+const zenVentoraAccountsUrl = (import.meta.env.VITE_ZENVENTORA_ACCOUNTS_URL || "https://accounts.zenventora.in").replace(/\/$/, "");
+function startZenVentoraAuth(mode: "signin" | "signup") {
+  const callback = window.location.origin + "/";
+  const url = new URL(zenVentoraAccountsUrl + "/");
+  url.searchParams.set("product", "visual-editor");
+  url.searchParams.set("mode", mode);
+  url.searchParams.set("redirect_to", callback);
+  window.location.assign(url.toString());
+}
+function readCentralLogoutMarker() {
+  const match = document.cookie.match(/(?:^|;\\s*)zv_central_logout=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+function markCentralLogout() {
+  document.cookie = "zv_central_logout=" + Date.now() + "; Domain=.zenventora.in; Path=/; Max-Age=31536000; SameSite=Lax; Secure";
+}
+
 const runtime = `
 <script id="__site_visual_editor_runtime">
 (function () {
@@ -109,15 +127,25 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
+    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accountAccessToken = fragment.get("account_access_token");
+    const accountRefreshToken = fragment.get("account_refresh_token");
+    const initialSession = accountAccessToken && accountRefreshToken
+      ? supabase.auth.setSession({ access_token: accountAccessToken, refresh_token: accountRefreshToken }).then(({ data, error }) => {
+          if (error) throw error;
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+          return data.session;
+        })
+      : supabase.auth.getSession().then(({ data, error }) => { if (error) throw error; return data.session; });
+    initialSession.then(session => {
       if (!active) return;
-      setUser(data.session?.user || null);
+      setUser(session?.user || null);
       const session = data.session as (typeof data.session & { provider_token?: string | null }) | null;
       if (session?.provider_token) {
         setToken(session.provider_token);
         setProvider(session.user?.app_metadata?.provider === "gitlab" ? "gitlab" : "github");
       }
-    });
+    }).catch(error => { if (active) setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not restore your ZenVentora session." }); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
       const providerSession = session as (typeof session & { provider_token?: string | null }) | null;
@@ -174,6 +202,39 @@ export default function App() {
   }, [user, token, repo]);
 
   useEffect(() => {
+    const initialMarker = readCentralLogoutMarker();
+    let checking = false;
+    let signedOut = false;
+    const checkSession = async () => {
+      if (checking || signedOut || document.visibilityState === "hidden") return;
+      checking = true;
+      try {
+        const marker = readCentralLogoutMarker();
+        if (marker && marker !== initialMarker) {
+          signedOut = true;
+          await supabase.auth.signOut({ scope: "local" });
+          setUser(null); setToken(""); setAccessibleRepos([]);
+          return;
+        }
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          const { error } = await supabase.auth.getUser();
+          if (error) {
+            signedOut = true;
+            await supabase.auth.signOut({ scope: "local" });
+            setUser(null); setToken(""); setAccessibleRepos([]);
+          }
+        }
+      } catch { /* Retry on focus or the next interval after network recovery. */ }
+      finally { checking = false; }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void checkSession(); };
+    window.addEventListener("focus", checkSession);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(checkSession, 20000);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", checkSession); document.removeEventListener("visibilitychange", onVisible); };
+  }, []);
+  useEffect(() => {
     let active = true;
     if (!user || !repo) {
       if (!user) setSavedProjectId(null);
@@ -211,7 +272,7 @@ export default function App() {
     setProvider(target);
     setAuthBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.linkIdentity({
         provider: target === "github" ? "github" : "gitlab",
         options: {
           scopes: target === "github" ? "repo" : "api read_repository write_repository",
@@ -450,17 +511,9 @@ export default function App() {
   }
 
   async function authAction(mode: "signin" | "signup") {
+    if (authBusy) return;
     setAuthBusy(true);
-    try {
-      const result = mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email: userEmail, password })
-        : await supabase.auth.signUp({ email: userEmail, password });
-      if (result.error) throw result.error;
-      if (mode === "signup" && !result.data.session) setNotice({ kind: "info", text: "Account created. Check your email to confirm, then sign in." });
-      else setNotice({ kind: "ok", text: mode === "signin" ? "Signed in. Drafts can now be saved." : "Account created and signed in." });
-    } catch (error) {
-      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Authentication failed." });
-    } finally { setAuthBusy(false); }
+    startZenVentoraAuth(mode);
   }
 
   function downloadHtml() {
@@ -478,7 +531,7 @@ export default function App() {
         <a className="brand" href="#" aria-label="Site Visual Editor home"><span className="brand-mark">SV</span><span>site<span className="brand-light">visual</span><small>GIT WORKSPACE</small></span></a>
         <div className="topbar-center"><span className="status-dot" /> Existing website editor <span className="topbar-separator">/</span> <span className="muted">{repo ? `${repo.owner}/${repo.name}` : "No repository connected"}</span></div>
         <div className="topbar-actions">
-          {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={async () => { await supabase.auth.signOut(); setToken(""); setAccessibleRepos([]); }}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
+          {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={async () => { await supabase.auth.signOut({ scope: "global" }); markCentralLogout(); setToken(""); setAccessibleRepos([]); }}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
           <button className="button primary small" disabled={loading || !currentFile} onClick={saveToGit}>{loading ? "Working…" : "Save Changes · Push to Git"}</button>
         </div>
       </header>
