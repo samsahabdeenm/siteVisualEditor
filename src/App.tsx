@@ -226,22 +226,19 @@ export default function App() {
 
   useEffect(() => {
     const initialMarker = readCentralLogoutMarker();
-    let seenMarker = "";
-    try { seenMarker = localStorage.getItem("zv_central_logout_seen") || ""; } catch {}
-    let checking = false;
-    let signedOut = false;
-    if (initialMarker && initialMarker !== seenMarker) {
+    const callbackParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    if (callbackParams.has("account_access_token")) {
       try { localStorage.setItem("zv_central_logout_seen", initialMarker); } catch {}
-      signedOut = true;
-      void supabase.auth.signOut({ scope: "local" }).finally(() => { setUser(null); setToken(""); setAccessibleRepos([]); });
     }
+    let checking = false;
     const checkSession = async () => {
-      if (checking || signedOut || document.visibilityState === "hidden") return;
+      if (checking || document.visibilityState === "hidden") return;
       checking = true;
       try {
         const marker = readCentralLogoutMarker();
-        if (marker && marker !== initialMarker) {
-          signedOut = true;
+        let seenMarker = "";
+        try { seenMarker = localStorage.getItem("zv_central_logout_seen") || ""; } catch {}
+        if (marker && marker !== seenMarker) {
           try { localStorage.setItem("zv_central_logout_seen", marker); } catch {}
           await supabase.auth.signOut({ scope: "local" });
           setUser(null); setToken(""); setAccessibleRepos([]);
@@ -251,7 +248,6 @@ export default function App() {
         if (data.session) {
           const { error } = await supabase.auth.getUser();
           if (error) {
-            signedOut = true;
             await supabase.auth.signOut({ scope: "local" });
             setUser(null); setToken(""); setAccessibleRepos([]);
           }
@@ -260,6 +256,7 @@ export default function App() {
       finally { checking = false; }
     };
     const onVisible = () => { if (document.visibilityState === "visible") void checkSession(); };
+    void checkSession();
     window.addEventListener("focus", checkSession);
     document.addEventListener("visibilitychange", onVisible);
     const timer = window.setInterval(checkSession, 20000);
