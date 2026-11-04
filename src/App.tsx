@@ -137,8 +137,15 @@ export default function App() {
           return data.session;
         })
       : supabase.auth.getSession().then(({ data, error }) => { if (error) throw error; return data.session; });
-    initialSession.then(session => {
+    initialSession.then(async session => {
       if (!active) return;
+      const productAccess = Array.isArray(session?.user?.app_metadata?.product_access) ? session.user.app_metadata.product_access : [];
+      if (session && !productAccess.includes("visual-editor")) {
+        await supabase.auth.signOut({ scope: "local" });
+        if (active) setNotice({ kind: "info", text: "Site Visual Editor access is not enabled yet. Sign in through ZenVentora Accounts and choose Enable access." });
+        setUser(null);
+        return;
+      }
       setUser(session?.user || null);
       const session = data.session as (typeof data.session & { provider_token?: string | null }) | null;
       if (session?.provider_token) {
@@ -147,6 +154,11 @@ export default function App() {
       }
     }).catch(error => { if (active) setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not restore your ZenVentora session." }); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const productAccess = Array.isArray(session?.user?.app_metadata?.product_access) ? session.user.app_metadata.product_access : [];
+      if (session?.user && !productAccess.includes("visual-editor")) {
+        setUser(null);
+        return;
+      }
       setUser(session?.user || null);
       const providerSession = session as (typeof session & { provider_token?: string | null }) | null;
       if (providerSession?.provider_token) {
