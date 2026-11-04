@@ -147,10 +147,10 @@ export default function App() {
         return;
       }
       setUser(session?.user || null);
-      const session = data.session as (typeof data.session & { provider_token?: string | null }) | null;
-      if (session?.provider_token) {
-        setToken(session.provider_token);
-        setProvider(session.user?.app_metadata?.provider === "gitlab" ? "gitlab" : "github");
+      const providerSession = session as (typeof session & { provider_token?: string | null }) | null;
+      if (providerSession?.provider_token) {
+        setToken(providerSession.provider_token);
+        setProvider(session?.user?.app_metadata?.provider === "gitlab" ? "gitlab" : "github");
       }
     }).catch(error => { if (active) setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not restore your ZenVentora session." }); });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
