@@ -24,7 +24,9 @@ function readCentralLogoutMarker() {
   return match ? decodeURIComponent(match[1]) : "";
 }
 function markCentralLogout() {
-  document.cookie = "zv_central_logout=" + Date.now() + "; Domain=.zenventora.in; Path=/; Max-Age=31536000; SameSite=Lax; Secure";
+  const marker = String(Date.now());
+  document.cookie = "zv_central_logout=" + marker + "; Domain=.zenventora.in; Path=/; Max-Age=31536000; SameSite=Lax; Secure";
+  try { localStorage.setItem("zv_central_logout_seen", marker); } catch {}
 }
 
 const runtime = `
@@ -130,7 +132,16 @@ export default function App() {
     const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const accountAccessToken = fragment.get("account_access_token");
     const accountRefreshToken = fragment.get("account_refresh_token");
-    const initialSession = accountAccessToken && accountRefreshToken
+    const currentLogoutMarker = readCentralLogoutMarker();
+    let seenLogoutMarker = "";
+    try { seenLogoutMarker = localStorage.getItem("zv_central_logout_seen") || ""; } catch {}
+    const hasPendingLogout = Boolean(currentLogoutMarker && currentLogoutMarker !== seenLogoutMarker && !(accountAccessToken && accountRefreshToken));
+    if (accountAccessToken && accountRefreshToken) {
+      try { localStorage.setItem("zv_central_logout_seen", currentLogoutMarker); } catch {}
+    }
+    const initialSession = hasPendingLogout
+      ? supabase.auth.signOut({ scope: "local" }).then(() => { try { localStorage.setItem("zv_central_logout_seen", currentLogoutMarker); } catch {} return null; })
+      : accountAccessToken && accountRefreshToken
       ? supabase.auth.setSession({ access_token: accountAccessToken, refresh_token: accountRefreshToken }).then(({ data, error }) => {
           if (error) throw error;
           window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
@@ -215,8 +226,15 @@ export default function App() {
 
   useEffect(() => {
     const initialMarker = readCentralLogoutMarker();
+    let seenMarker = "";
+    try { seenMarker = localStorage.getItem("zv_central_logout_seen") || ""; } catch {}
     let checking = false;
     let signedOut = false;
+    if (initialMarker && initialMarker !== seenMarker) {
+      try { localStorage.setItem("zv_central_logout_seen", initialMarker); } catch {}
+      signedOut = true;
+      void supabase.auth.signOut({ scope: "local" }).finally(() => { setUser(null); setToken(""); setAccessibleRepos([]); });
+    }
     const checkSession = async () => {
       if (checking || signedOut || document.visibilityState === "hidden") return;
       checking = true;
@@ -224,6 +242,7 @@ export default function App() {
         const marker = readCentralLogoutMarker();
         if (marker && marker !== initialMarker) {
           signedOut = true;
+          try { localStorage.setItem("zv_central_logout_seen", marker); } catch {}
           await supabase.auth.signOut({ scope: "local" });
           setUser(null); setToken(""); setAccessibleRepos([]);
           return;
