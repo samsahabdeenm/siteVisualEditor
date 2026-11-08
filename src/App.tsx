@@ -4,8 +4,9 @@ import { supabase } from "./lib/supabase";
 import { commitRepositoryAsset, commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
 import type { AccessibleRepository, GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
 import { detectFramework } from "./lib/frameworkAdapters";
+import { discoverSitemapPages, repositoryPages } from "./lib/sitemap";
 
-type SelectedElement = { id: string; tag: string; text: string; href: string; src: string; alt: string; color: string; backgroundColor: string; fontSize: string; margin: string; padding: string; width: string; textAlign: string };
+type SelectedElement = { id: string; tag: string; text: string; href: string; src: string; alt: string; color: string; backgroundColor: string; fontSize: string; margin: string; padding: string; width: string; textAlign: string; idAttr: string; className: string; target: string; rel: string; title: string };
 type Notice = { kind: "ok" | "error" | "info"; text: string } | null;
 
 const runtime = `
@@ -27,14 +28,14 @@ const runtime = `
     document.querySelectorAll('[data-ve-selected="true"]').forEach(function (el) { el.removeAttribute('data-ve-selected'); });
     node.setAttribute('data-ve-selected', 'true');
     selected = node;
-    parent.postMessage({ type: 've-selected', element: { id: node.getAttribute('data-ve-id'), tag: node.tagName.toLowerCase(), text: node.innerText || node.textContent || '', href: node.getAttribute('href') || '', src: node.getAttribute('src') || '', alt: node.getAttribute('alt') || '', color: node.style.color || getComputedStyle(node).color || '', backgroundColor: node.style.backgroundColor || '', fontSize: node.style.fontSize || '', margin: node.style.margin || '', padding: node.style.padding || '', width: node.style.width || '', textAlign: node.style.textAlign || '' } }, '*');
+    parent.postMessage({ type: 've-selected', element: { id: node.getAttribute('data-ve-id'), tag: node.tagName.toLowerCase(), text: node.innerText || node.textContent || '', href: node.getAttribute('href') || '', src: node.getAttribute('src') || '', alt: node.getAttribute('alt') || '', color: node.style.color || getComputedStyle(node).color || '', backgroundColor: node.style.backgroundColor || '', fontSize: node.style.fontSize || '', margin: node.style.margin || '', padding: node.style.padding || '', width: node.style.width || '', textAlign: node.style.textAlign || '', idAttr: node.getAttribute('id') || '', className: node.getAttribute('class') || '', target: node.getAttribute('target') || '', rel: node.getAttribute('rel') || '', title: node.getAttribute('title') || '' } }, '*');
   }, true);
   window.addEventListener('message', function (event) {
     var data = event.data || {};
     if (data.type === 've-apply' && selected) {
       var p = data.patch || {};
       if (p.text !== undefined && !['img','input','textarea','video','audio','source','br','hr'].includes(selected.tagName.toLowerCase())) selected.textContent = p.text;
-      ['href','src','alt'].forEach(function (key) { if (p[key] !== undefined && ['a','img','source','video','audio'].includes(selected.tagName.toLowerCase())) { if (p[key]) selected.setAttribute(key, p[key]); else selected.removeAttribute(key); } });
+      ['href','src','alt','idAttr','className','target','rel','title'].forEach(function (key) { if (p[key] !== undefined) { var attr = key === 'idAttr' ? 'id' : key === 'className' ? 'class' : key; if (p[key]) selected.setAttribute(attr, p[key]); else selected.removeAttribute(attr); } });
       ['color','backgroundColor','fontSize','margin','padding','width','textAlign'].forEach(function (key) { if (p[key] !== undefined) selected.style[key] = p[key]; });
       parent.postMessage({ type: 've-selected', element: { id: selected.getAttribute('data-ve-id'), tag: selected.tagName.toLowerCase(), text: selected.innerText || selected.textContent || '', href: selected.getAttribute('href') || '', src: selected.getAttribute('src') || '', alt: selected.getAttribute('alt') || '', color: selected.style.color || '', backgroundColor: selected.style.backgroundColor || '', fontSize: selected.style.fontSize || '', margin: selected.style.margin || '', padding: selected.style.padding || '', width: selected.style.width || '', textAlign: selected.style.textAlign || '' } }, '*');
     }
@@ -43,6 +44,18 @@ const runtime = `
       parent.postMessage({ type: 've-changed' }, '*');
     }
     if (data.type === 've-remove' && selected && selected.parentElement) { selected.remove(); selected = null; parent.postMessage({ type: 've-selected', element: null }); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-move-up' && selected && selected.previousElementSibling) { selected.parentElement.insertBefore(selected, selected.previousElementSibling); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-move-down' && selected && selected.nextElementSibling) { selected.parentElement.insertBefore(selected.nextElementSibling, selected); parent.postMessage({ type: 've-changed' }, '*'); }\n    if (data.type === 've-select-id') { var target = document.querySelector('[data-ve-id="' + String(data.id).replace(/[^0-9]/g, '') + '"]'); if (target) target.click(); }\n    if (data.type === 've-links') { parent.postMessage({ type: 've-links-result', links: Array.from(document.querySelectorAll('a[href]')).map(function (a) { return { id: a.getAttribute('data-ve-id'), text: (a.innerText || a.textContent || '').trim().slice(0, 120), href: a.getAttribute('href') || '' }; }) }, '*'); }
+    if (data.type === 've-meta') {
+      var getMeta = function (name, property) { var n = document.querySelector('meta[name="' + name + '"]') || document.querySelector('meta[property="' + property + '"]'); return n ? n.getAttribute('content') || '' : ''; };
+      parent.postMessage({ type: 've-meta-result', meta: { title: document.title || '', description: getMeta('description', ''), canonical: (document.querySelector('link[rel="canonical"]') || {}).href || '', ogTitle: getMeta('', 'og:title'), ogDescription: getMeta('', 'og:description'), ogImage: getMeta('', 'og:image') } }, '*');
+    }
+    if (data.type === 've-apply-meta' && data.meta) {
+      var m = data.meta;
+      document.title = m.title || document.title;
+      var setMeta = function (name, property, value) { var selector = property ? 'meta[property="' + property + '"]' : 'meta[name="' + name + '"]'; var el = document.querySelector(selector); if (!el) { el = document.createElement('meta'); if (property) el.setAttribute('property', property); else el.setAttribute('name', name); document.head.appendChild(el); } if (value) el.setAttribute('content', value); else el.removeAttribute('content'); };
+      setMeta('description', '', m.description); setMeta('', 'og:title', m.ogTitle); setMeta('', 'og:description', m.ogDescription); setMeta('', 'og:image', m.ogImage);
+      var canonical = document.querySelector('link[rel="canonical"]'); if (m.canonical) { if (!canonical) { canonical = document.createElement('link'); canonical.setAttribute('rel','canonical'); document.head.appendChild(canonical); } canonical.setAttribute('href', m.canonical); } else if (canonical) canonical.remove();
+      parent.postMessage({ type: 've-changed' }, '*');
+    }
     if (data.type === 've-html') {
       var clone = document.documentElement.cloneNode(true);
       clone.querySelectorAll('#__site_visual_editor_runtime, #__site_visual_editor_highlight, #__site_visual_editor_base').forEach(function (n) { n.remove(); });
@@ -53,7 +66,7 @@ const runtime = `
 })();
 </script>`;
 
-const emptyElement: SelectedElement = { id: "", tag: "", text: "", href: "", src: "", alt: "", color: "", backgroundColor: "", fontSize: "", margin: "", padding: "", width: "", textAlign: "" };
+const emptyElement: SelectedElement = { id: "", tag: "", text: "", href: "", src: "", alt: "", color: "", backgroundColor: "", fontSize: "", margin: "", padding: "", width: "", textAlign: "", idAttr: "", className: "", target: "", rel: "", title: "" };
 const editableExtensions = /\.(html?|css|js|jsx|ts|tsx|json|svg)$/i;
 
 function buildPreview(content: string, repo: RepoInfo, filePath: string) {
@@ -96,6 +109,13 @@ export default function App() {
   const [commitMessage, setCommitMessage] = useState("Update website with visual editor");
   const [stagedAssets, setStagedAssets] = useState<Array<{ path: string; contentBase64: string; previewUrl: string; mimeType: string; name: string }>>([]);
   const [showConnect, setShowConnect] = useState(true);
+  const [assignedSites, setAssignedSites] = useState<Array<{ id: string; name: string; slug: string; domain: string; provider: GitProvider; repository_owner: string; repository_name: string; default_branch: string; project_root: string; sitemap_url?: string | null; role: "editor" | "viewer" }>>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
+  const [siteLoading, setSiteLoading] = useState(false);
+  const [pageInventory, setPageInventory] = useState<Array<{ path: string; url: string; source: "sitemap" | "repository" }>>([]);
+  const [meta, setMeta] = useState({ title: "", description: "", canonical: "", ogTitle: "", ogDescription: "", ogImage: "" });
+  const productParam = new URLSearchParams(window.location.search).get("product")?.toLowerCase() || "";
+  const isVadixMode = productParam === "vadix" || window.location.pathname.toLowerCase().includes("/vadix");
   const frameRef = useRef<HTMLIFrameElement>(null);
   const htmlResultResolve = useRef<((html: string) => void) | null>(null);
 
@@ -167,6 +187,51 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
+    if (!user || !isVadixMode) { setAssignedSites([]); return () => { active = false; }; }
+    (async () => {
+      setSiteLoading(true);
+      const { data, error } = await supabase.from("vadix_site_assignments")
+        .select("site_id,role,vadix_sites(id,name,slug,domain,provider,repository_owner,repository_name,default_branch,project_root,sitemap_url,enabled)")
+        .eq("user_id", user.id);
+      if (error) {
+        setNotice({ kind: "error", text: "Vadix access mapping could not be loaded. Ask the administrator to assign your website." });
+        setSiteLoading(false);
+        return;
+      }
+      const mapped = (data || []).filter((row: any) => row.vadix_sites?.enabled).map((row: any) => ({ ...row.vadix_sites, role: row.role }));
+      if (!active) return;
+      setAssignedSites(mapped);
+      if (mapped.length === 1) setSelectedSiteId(mapped[0].id);
+      setSiteLoading(false);
+    })().catch(error => {
+      if (active) { setSiteLoading(false); setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not load Vadix site access." }); }
+    });
+    return () => { active = false; };
+  }, [user, isVadixMode]);
+
+  async function openAssignedSite(siteId: string) {
+    const site = assignedSites.find(item => item.id === siteId);
+    if (!site || !token.trim()) {
+      setNotice({ kind: "error", text: "This account has a Vadix site assignment, but Git provider authorization is not available in this session." });
+      return;
+    }
+    setSiteLoading(true);
+    try {
+      const parsed: RepoInfo = { provider: site.provider, owner: site.repository_owner, name: site.repository_name, branch: site.default_branch || "main", root: site.project_root && site.project_root !== "/" ? site.project_root : "" };
+      const list = await listRepositoryFiles(parsed, token.trim());
+      setRepo(parsed); setRepoUrl(site.provider === "github" ? "https://github.com/" + site.repository_owner + "/" + site.repository_name : "https://gitlab.com/" + site.repository_owner + "/" + site.repository_name);
+      setProvider(site.provider); setBranch(parsed.branch); setRoot(parsed.root); setFiles(list); setCurrentFile(null); setOriginalFile(null); setFrameHtml(""); setSelected(emptyElement); setDirty(false); setSelectedSiteId(site.id); setShowConnect(false);
+      let pages = repositoryPages(list);
+      try { const sitemapPages = await discoverSitemapPages(site.domain, site.sitemap_url || undefined); if (sitemapPages.length) pages = sitemapPages; } catch { /* repository HTML remains the reliable fallback */ }
+      setPageInventory(pages);
+      setNotice({ kind: "ok", text: site.name + " connected. " + pages.length + " editable page(s) discovered." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not load the assigned Vadix website." });
+    } finally { setSiteLoading(false); }
+  }
+
+  useEffect(() => {
+    let active = true;
     if (!user || !repo) {
       if (!user) setSavedProjectId(null);
       return () => { active = false; };
@@ -186,6 +251,7 @@ export default function App() {
       if (event.source !== frameRef.current?.contentWindow) return;
       if (event.data?.type === "ve-selected") setSelected(event.data.element || emptyElement);
       if (event.data?.type === "ve-links-result") setLinkInventory(event.data.links || []);
+      if (event.data?.type === "ve-meta-result") setMeta(event.data.meta || { title: "", description: "", canonical: "", ogTitle: "", ogDescription: "", ogImage: "" });
       if (event.data?.type === "ve-changed") { setDirty(true); setNotice({ kind: "info", text: "Preview changed. Save a draft or commit to Git to keep it." }); }
       if (event.data?.type === "ve-html-result" && htmlResultResolve.current) {
         htmlResultResolve.current(event.data.html);
@@ -197,7 +263,13 @@ export default function App() {
   }, []);
 
   const previewSrc = useMemo(() => frameHtml, [frameHtml]);
-  const visibleFiles = useMemo(() => files.filter(file => editableExtensions.test(file.path) && file.path.toLowerCase().includes(filter.toLowerCase())), [files, filter]);
+  const visibleFiles = useMemo(() => {
+    if (isVadixMode && pageInventory.length) {
+      const paths = new Set(pageInventory.map(page => page.path.replace(/^\\//, "")));
+      return files.filter(file => /\\.html?$/i.test(file.path) && paths.has(file.path) && file.path.toLowerCase().includes(filter.toLowerCase()));
+    }
+    return files.filter(file => editableExtensions.test(file.path) && file.path.toLowerCase().includes(filter.toLowerCase()));
+  }, [files, filter, pageInventory, isVadixMode]);
 
   async function connectGitProvider(target: GitProvider) {
     setProvider(target);
@@ -308,7 +380,7 @@ export default function App() {
         setCurrentFile(file); setOriginalFile(file); setFrameHtml(""); setSelected(emptyElement);
         setNotice({ kind: "info", text: "This source file is loaded. Direct visual preview is available for HTML files; CSS/JS/JSX source editing will be added through framework-aware editing." });
       } else {
-        setCurrentFile(file); setOriginalFile(file); setFrameHtml(buildPreview(file.content, repo, path)); setSelected(emptyElement); setDirty(false);
+        setCurrentFile(file); setOriginalFile(file); setFrameHtml(buildPreview(file.content, repo, path)); setSelected(emptyElement); setDirty(false); setMeta({ title: "", description: "", canonical: "", ogTitle: "", ogDescription: "", ogImage: "" }); setTimeout(() => frameRef.current?.contentWindow?.postMessage({ type: "ve-meta" }, "*"), 50);
         setNotice({ kind: "ok", text: `Loaded ${path} in isolated preview. Select an element to edit its properties.` });
       }
     } catch (error) {
@@ -473,7 +545,7 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#" aria-label="Site Visual Editor home"><span className="brand-mark">SV</span><span>site<span className="brand-light">visual</span><small>GIT WORKSPACE</small></span></a>
-        <div className="topbar-center"><span className="status-dot" /> Existing website editor <span className="topbar-separator">/</span> <span className="muted">{repo ? `${repo.owner}/${repo.name}` : "No repository connected"}</span></div>
+        <div className="topbar-center"><span className="status-dot" /> Existing website editor <span className="topbar-separator">/</span> <span className="muted">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.name || "Vadix workspace") : (repo ? `${repo.owner}/${repo.name}` : "No repository connected")}</span></div>
         <div className="topbar-actions">
           {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={async () => { await supabase.auth.signOut(); setToken(""); setAccessibleRepos([]); }}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
           <button className="button primary small" disabled={loading || !currentFile} onClick={saveToGit}>{loading ? "Working…" : "↥ Commit to Git"}</button>
@@ -483,7 +555,16 @@ export default function App() {
       <main className="workspace">
         <aside className="left-rail">
           <div className="rail-heading"><span>PROJECT</span><button className="icon-button" title="Connect another repository" onClick={() => setShowConnect(!showConnect)}>＋</button></div>
-          {showConnect && <form className="connect-form" onSubmit={connectRepository}>
+          {isVadixMode && user ? <section className="customer-site-panel" aria-label="Assigned websites">
+            <div className="customer-mode-badge">VADIX · CUSTOMER WORKSPACE</div>
+            <h3>Your website</h3>
+            <p className="helper">Only websites assigned to this account can be opened here.</p>
+            {siteLoading && <div className="empty-files">Loading your assigned website…</div>}
+            {!siteLoading && !assignedSites.length && <div className="empty-files">No website is assigned to this account yet.</div>}
+            {assignedSites.map(site => <button key={site.id} className={selectedSiteId === site.id ? "site-choice selected" : "site-choice"} onClick={() => void openAssignedSite(site.id)} disabled={siteLoading}>
+              <span><b>{site.name}</b><small>{site.domain}</small></span><span>{site.role === "viewer" ? "VIEW" : "EDIT"}</span>
+            </button>)}
+          </section> : showConnect && <form className="connect-form" onSubmit={connectRepository}>
             <label>Git provider</label>
             <div className="segmented"><button type="button" className={provider === "github" ? "active" : ""} onClick={() => { setProvider("github"); setAccessibleRepos([]); if (repoUrl.includes("gitlab")) setRepoUrl(""); }}>GitHub</button><button type="button" className={provider === "gitlab" ? "active" : ""} onClick={() => { setProvider("gitlab"); setAccessibleRepos([]); if (repoUrl.includes("github")) setRepoUrl(""); }}>GitLab</button></div>
             <div className="provider-connect"><button className="button subtle full" type="button" disabled={authBusy} onClick={() => connectGitProvider(provider)}>{authBusy ? "Redirecting…" : "Connect " + (provider === "github" ? "GitHub" : "GitLab") + " account"}</button><button className="button subtle full" type="button" disabled={loading || !token.trim()} onClick={loadAccessibleRepositories}>{loading ? "Loading…" : "Load repositories I can access"}</button>{accessibleRepos.length > 0 && <><label htmlFor="accessible-repos">Accessible repositories</label><select id="accessible-repos" defaultValue="" onChange={event => chooseAccessibleRepository(event.target.value)}><option value="" disabled>Choose a repository…</option>{accessibleRepos.map(item => <option key={item.label} value={item.label}>{item.label}</option>)}</select></>}</div>
@@ -493,7 +574,7 @@ export default function App() {
             <p className="helper">Prefer provider sign-in and repository selection. Git credentials are not written to the visual-editor project or revision tables.</p>
             <button className="button primary full" type="submit" disabled={loading}>{loading ? "Connecting…" : "Connect repository →"}</button>
           </form>}
-          <div className="files-heading"><span>FILES</span><span className="count">{visibleFiles.length}</span></div>
+          <div className="files-heading"><span>{isVadixMode ? "PAGES" : "FILES"}</span><span className="count">{visibleFiles.length}</span></div>
           <input className="file-search" value={filter} onChange={e => setFilter(e.target.value)} placeholder="⌕  Find a page or file…" />
           <div className="file-list">
             {visibleFiles.map(file => <button key={file.path} className={currentFile?.path === file.path ? "file-item selected" : "file-item"} onClick={() => openFile(file.path)} title={file.path}><span className="file-type">{file.path.toLowerCase().endsWith(".html") || file.path.toLowerCase().endsWith(".htm") ? "HTML" : file.path.split(".").pop()?.toUpperCase().slice(0, 4)}</span><span className="file-path">{file.path.split("/").pop()}<small>{file.path.includes("/") ? file.path.split("/").slice(0, -1).join("/") : "root"}</small></span></button>)}
@@ -508,9 +589,9 @@ export default function App() {
             <div className="toolbar-controls"><div className="viewport-switch"><button className={viewport === "desktop" ? "active" : ""} onClick={() => setViewport("desktop")} title="Desktop preview">▰</button><button className={viewport === "tablet" ? "active" : ""} onClick={() => setViewport("tablet")} title="Tablet preview">▯</button><button className={viewport === "mobile" ? "active" : ""} onClick={() => setViewport("mobile")} title="Mobile preview">▯</button></div><button className="button subtle small" onClick={() => { setShowLinks(true); frameRef.current?.contentWindow?.postMessage({ type: "ve-links" }, "*"); }} disabled={!previewSrc}>↗ Find links</button><button className="button subtle small" onClick={downloadHtml} disabled={!currentFile}>↓ Export</button></div>
           </div>
           <div className="canvas-area">
-            {previewSrc ? <div className={`preview-device ${viewport}`}><div className="preview-browser"><div className="browser-dots"><i/><i/><i/></div><div className="browser-url">{repo?.owner}/{repo?.name}/{currentFile?.path}</div><span className="browser-lock">⌁</span></div><iframe ref={frameRef} title="Isolated website preview" className="preview-frame" sandbox="allow-scripts allow-forms allow-popups" srcDoc={previewSrc} /></div>
+            {previewSrc ? <div className={`preview-device ${viewport}`}><div className="preview-browser"><div className="browser-dots"><i/><i/><i/></div><div className="browser-url">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.domain || repo?.name) : (repo?.owner + "/" + repo?.name + "/" + currentFile?.path)}</div><span className="browser-lock">⌁</span></div><iframe ref={frameRef} title="Isolated website preview" className="preview-frame" sandbox="allow-scripts allow-forms allow-popups" srcDoc={previewSrc} /></div>
               : currentFile ? <div className="source-editor-panel"><div className="source-editor-heading"><div><b>Source file editor</b><small>{currentFile.path} · {inferFramework(files)}</small></div><span className="element-badge">SOURCE MODE</span></div><p>HTML pages use visual preview. This file is editable as source; framework-aware JSX visual preview is a separate adapter still in progress.</p><textarea className="source-editor" spellCheck={false} value={currentFile.content} onChange={e => { setCurrentFile({ ...currentFile, content: e.target.value }); setDirty(true); }} /></div>
-              : <div className="empty-canvas"><div className="empty-illustration"><div className="mock-window"><div className="mock-top"><i/><i/><i/></div><div className="mock-layout"><div/><div/><div/><div/></div></div><span className="mock-cursor">↖</span></div><h2>Make changes to the site you already have.</h2><p>Connect a Git repository, choose an HTML page, then click any element in the preview to edit it. No new headers or generated layouts.</p><button className="button primary" onClick={() => setShowConnect(true)}>Connect a repository</button><div className="feature-pills"><span>✦ Content edits</span><span>▧ Section clone / remove</span><span>⌘ Git commits</span></div></div>}
+              : <div className="empty-canvas"><div className="empty-illustration"><div className="mock-window"><div className="mock-top"><i/><i/><i/></div><div className="mock-layout"><div/><div/><div/><div/></div></div><span className="mock-cursor">↖</span></div><h2>Make changes to the site you already have.</h2><p>Open an assigned website, choose any page, then click the existing element in the preview to edit it. Vadix changes the existing site; it does not generate a replacement layout.</p><button className="button primary" onClick={() => setShowConnect(true)}>{isVadixMode ? "Open assigned website" : "Connect a repository"}</button><div className="feature-pills"><span>✦ Content edits</span><span>▧ Section clone / remove</span><span>⌘ Git commits</span></div></div>}
           </div>
           <div className="statusbar"><span className="status-ready"><i/> Preview sandbox</span><span>{repo ? inferFramework(files) : "Waiting for project"}</span><span>{currentFile ? currentFile.path : "No page selected"}</span><span className={dirty ? "changes-pending" : ""}>{dirty ? "● Unsaved changes" : "✓ No pending changes"}</span></div>
         </section>
@@ -518,13 +599,14 @@ export default function App() {
         <aside className="right-panel">
           <div className="panel-tabs"><button className="active">Properties</button><button onClick={() => setNotice({ kind: "info", text: "Section operations are available for the selected preview element." })}>Structure</button></div>
           <div className="panel-content">
+            {currentFile && /\\.html?$/i.test(currentFile.path) && <section className="property-section metadata-section"><h4>PAGE SEO & SOCIAL</h4><p className="helper">Edit document metadata without leaving the visual editor.</p><label htmlFor="meta-title">Title</label><input id="meta-title" value={meta.title} onChange={e => { const next = { ...meta, title: e.target.value }; setMeta(next); frameRef.current?.contentWindow?.postMessage({ type: "ve-apply-meta", meta: next }, "*"); setDirty(true); }} /><label htmlFor="meta-description">Meta description</label><textarea id="meta-description" rows={2} value={meta.description} onChange={e => { const next = { ...meta, description: e.target.value }; setMeta(next); frameRef.current?.contentWindow?.postMessage({ type: "ve-apply-meta", meta: next }, "*"); setDirty(true); }} /><label htmlFor="meta-canonical">Canonical URL</label><input id="meta-canonical" value={meta.canonical} onChange={e => { const next = { ...meta, canonical: e.target.value }; setMeta(next); frameRef.current?.contentWindow?.postMessage({ type: "ve-apply-meta", meta: next }, "*"); setDirty(true); }} /><label htmlFor="meta-og-title">OG title</label><input id="meta-og-title" value={meta.ogTitle} onChange={e => { const next = { ...meta, ogTitle: e.target.value }; setMeta(next); frameRef.current?.contentWindow?.postMessage({ type: "ve-apply-meta", meta: next }, "*"); setDirty(true); }} /><label htmlFor="meta-og-description">OG description</label><textarea id="meta-og-description" rows={2} value={meta.ogDescription} onChange={e => { const next = { ...meta, ogDescription: e.target.value }; setMeta(next); frameRef.current?.contentWindow?.postMessage({ type: "ve-apply-meta", meta: next }, "*"); setDirty(true); }} /><label htmlFor="meta-og-image">OG image URL</label><input id="meta-og-image" value={meta.ogImage} onChange={e => { const next = { ...meta, ogImage: e.target.value }; setMeta(next); frameRef.current?.contentWindow?.postMessage({ type: "ve-apply-meta", meta: next }, "*"); setDirty(true); }} /></section>}
             {showLinks && <section className="link-finder"><div className="link-finder-heading"><h4>LINKS IN THIS PAGE</h4><button className="icon-button" onClick={() => setShowLinks(false)} title="Close link finder">×</button></div>{linkInventory.length ? linkInventory.map((link, index) => <button key={link.id || index} className="link-result" onClick={() => frameRef.current?.contentWindow?.postMessage({ type: "ve-select-id", id: link.id }, "*")}><span>{link.text || "Untitled link"}</span><small title={link.href}>{link.href}</small></button>) : <p className="helper">No links found in this page, or the preview has not finished loading.</p>}</section>}
             <div className="panel-title"><div><span className="eyebrow">SELECTED ELEMENT</span><h3>{selected.tag ? `<${selected.tag}>` : "Nothing selected"}</h3></div>{selected.tag && <span className="element-badge">{selected.tag.toUpperCase()}</span>}</div>
             {!selected.tag ? <div className="select-hint"><div className="target-icon">⌖</div><b>Select an element</b><p>Click text, image, button or section in the preview to edit its existing attributes and styles.</p></div> : <>
               <section className="property-section"><h4>CONTENT</h4>{!["img","input","video","audio","source","br","hr"].includes(selected.tag) && <><label htmlFor="prop-text">Text content</label><textarea id="prop-text" rows={3} value={selected.text} onChange={e => applyPatch({ text: e.target.value })} /></>}
                 {["a","img","source","video","audio"].includes(selected.tag) && <><label htmlFor="prop-link">{selected.tag === "img" ? "Image source URL" : "Link / source URL"}</label><input id="prop-link" value={selected.tag === "img" ? selected.src : selected.href} onChange={e => applyPatch(selected.tag === "img" ? { src: e.target.value } : { href: e.target.value })} placeholder="https://…" />{selected.tag === "img" && <><label htmlFor="prop-alt">Alternative text</label><input id="prop-alt" value={selected.alt} onChange={e => applyPatch({ alt: e.target.value })} /><label htmlFor="replace-image-file">Replace image from your device</label><input id="replace-image-file" type="file" accept="image/*" onChange={e => { const file = e.target.files?.[0]; if (file) void stageImageReplacement(file); e.currentTarget.value = ""; }} /><small className="helper">{stagedAssets.length ? `${stagedAssets.length} image(s) staged — they upload when you save changes.` : "Images are staged locally first; Save changes uploads them to the repository assets/ folder."}</small></>}</>}
               </section>
-              <section className="property-section"><h4>APPEARANCE</h4><div className="field-row"><div><label htmlFor="prop-color">Text color</label><input id="prop-color" value={selected.color} onChange={e => applyPatch({ color: e.target.value })} placeholder="#222 or CSS" /></div><div><label htmlFor="prop-bg">Background</label><input id="prop-bg" value={selected.backgroundColor} onChange={e => applyPatch({ backgroundColor: e.target.value })} placeholder="#fff or CSS" /></div></div><div className="field-row"><div><label htmlFor="prop-font">Font size</label><input id="prop-font" value={selected.fontSize} onChange={e => applyPatch({ fontSize: e.target.value })} placeholder="16px" /></div><div><label htmlFor="prop-width">Width</label><input id="prop-width" value={selected.width} onChange={e => applyPatch({ width: e.target.value })} placeholder="100% / auto" /></div></div><div className="field-row"><div><label htmlFor="prop-margin">Margin</label><input id="prop-margin" value={selected.margin} onChange={e => applyPatch({ margin: e.target.value })} placeholder="16px 0" /></div><div><label htmlFor="prop-padding">Padding</label><input id="prop-padding" value={selected.padding} onChange={e => applyPatch({ padding: e.target.value })} placeholder="12px" /></div></div><label htmlFor="prop-align">Text alignment</label><select id="prop-align" value={selected.textAlign} onChange={e => applyPatch({ textAlign: e.target.value })}><option value="">Theme default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select></section>
+              <section className="property-section"><h4>APPEARANCE</h4><div className="field-row"><div><label htmlFor="prop-color">Text color</label><input id="prop-color" value={selected.color} onChange={e => applyPatch({ color: e.target.value })} placeholder="#222 or CSS" /></div><div><label htmlFor="prop-bg">Background</label><input id="prop-bg" value={selected.backgroundColor} onChange={e => applyPatch({ backgroundColor: e.target.value })} placeholder="#fff or CSS" /></div></div><div className="field-row"><div><label htmlFor="prop-font">Font size</label><input id="prop-font" value={selected.fontSize} onChange={e => applyPatch({ fontSize: e.target.value })} placeholder="16px" /></div><div><label htmlFor="prop-width">Width</label><input id="prop-width" value={selected.width} onChange={e => applyPatch({ width: e.target.value })} placeholder="100% / auto" /></div></div><div className="field-row"><div><label htmlFor="prop-margin">Margin</label><input id="prop-margin" value={selected.margin} onChange={e => applyPatch({ margin: e.target.value })} placeholder="16px 0" /></div><div><label htmlFor="prop-padding">Padding</label><input id="prop-padding" value={selected.padding} onChange={e => applyPatch({ padding: e.target.value })} placeholder="12px" /></div></div><label htmlFor="prop-align">Text alignment</label><select id="prop-align" value={selected.textAlign} onChange={e => applyPatch({ textAlign: e.target.value })}><option value="">Theme default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option><option value="justify">Justify</option></select><div className="field-row"><div><label htmlFor="prop-id">Element ID</label><input id="prop-id" value={selected.idAttr} onChange={e => applyPatch({ idAttr: e.target.value })} /></div><div><label htmlFor="prop-class">CSS class</label><input id="prop-class" value={selected.className} onChange={e => applyPatch({ className: e.target.value })} /></div></div><div className="field-row"><div><label htmlFor="prop-target">Link target</label><select id="prop-target" value={selected.target} onChange={e => applyPatch({ target: e.target.value })}><option value="">Default</option><option value="_self">Same tab</option><option value="_blank">New tab</option><option value="_parent">Parent</option></select></div><div><label htmlFor="prop-rel">Link rel</label><input id="prop-rel" value={selected.rel} onChange={e => applyPatch({ rel: e.target.value })} placeholder="nofollow sponsored" /></div></div><label htmlFor="prop-title">Title attribute</label><input id="prop-title" value={selected.title} onChange={e => applyPatch({ title: e.target.value })} /></section>
               <section className="property-section"><h4>SECTION ACTIONS</h4><p className="helper">These actions affect the selected element and its nested content.</p><div className="action-row"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-up" }, "*"); setDirty(true); }}>↑ Move up</button><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-move-down" }, "*"); setDirty(true); }}>↓ Move down</button></div><div className="action-row section-actions"><button className="button subtle" onClick={() => { frameRef.current?.contentWindow?.postMessage({ type: "ve-duplicate" }, "*"); setDirty(true); }}>▢ Clone</button><button className="button danger" onClick={() => { if (window.confirm("Remove this element from the page preview? This change is not committed until you save it.")) { frameRef.current?.contentWindow?.postMessage({ type: "ve-remove" }, "*"); setSelected(emptyElement); setDirty(true); } }}>⌫ Remove</button></div></section>
             </>}
             <div className="panel-save"><button className="button primary full" disabled={loading || !currentFile || !user} onClick={saveDraft}>{loading ? "Saving…" : "▣ Save draft to database"}</button><small>{user ? "Saves a version snapshot to your private workspace." : "Sign in below to enable database drafts."}</small><button className="button subtle full" disabled={loading || !currentFile} onClick={saveToGit}>↥ Save changes to Git</button></div>
