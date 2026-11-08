@@ -4,7 +4,7 @@ import { supabase } from "./lib/supabase";
 import { commitRepositoryAsset, commitRepositoryFile, listAccessibleRepositories, listRepositoryFiles, parseRepositoryUrl, rawBaseUrl, readRepositoryFile } from "./lib/git";
 import type { AccessibleRepository, GitProvider, LoadedFile, RepoFile, RepoInfo } from "./lib/git";
 import { detectFramework } from "./lib/frameworkAdapters";
-import { discoverSitemapPages, repositoryPages } from "./lib/sitemap";
+import { discoverSitemapPages, mapSitemapToRepositoryPages, repositoryPages } from "./lib/sitemap";
 
 type SelectedElement = { id: string; tag: string; text: string; href: string; src: string; alt: string; color: string; backgroundColor: string; fontSize: string; margin: string; padding: string; width: string; textAlign: string; idAttr: string; className: string; target: string; rel: string; title: string };
 type Notice = { kind: "ok" | "error" | "info"; text: string } | null;
@@ -222,7 +222,7 @@ export default function App() {
       setRepo(parsed); setRepoUrl(site.provider === "github" ? "https://github.com/" + site.repository_owner + "/" + site.repository_name : "https://gitlab.com/" + site.repository_owner + "/" + site.repository_name);
       setProvider(site.provider); setBranch(parsed.branch); setRoot(parsed.root); setFiles(list); setCurrentFile(null); setOriginalFile(null); setFrameHtml(""); setSelected(emptyElement); setDirty(false); setSelectedSiteId(site.id); setShowConnect(false);
       let pages = repositoryPages(list);
-      try { const sitemapPages = await discoverSitemapPages(site.domain, site.sitemap_url || undefined); if (sitemapPages.length) pages = sitemapPages; } catch { /* repository HTML remains the reliable fallback */ }
+      try { const sitemapPages = await discoverSitemapPages(site.domain, site.sitemap_url || undefined); const mapped = mapSitemapToRepositoryPages(sitemapPages, list); if (mapped.length) pages = mapped; } catch { /* repository HTML remains the reliable fallback */ }
       setPageInventory(pages);
       setNotice({ kind: "ok", text: site.name + " connected. " + pages.length + " editable page(s) discovered." });
     } catch (error) {
@@ -265,8 +265,8 @@ export default function App() {
   const previewSrc = useMemo(() => frameHtml, [frameHtml]);
   const visibleFiles = useMemo(() => {
     if (isVadixMode && pageInventory.length) {
-      const paths = new Set(pageInventory.map(page => page.path.replace(/^\\//, "")));
-      return files.filter(file => /\\.html?$/i.test(file.path) && paths.has(file.path) && file.path.toLowerCase().includes(filter.toLowerCase()));
+      const paths = new Set(pageInventory.map(page => page.path.replace(/^\//, "")));
+      return files.filter(file => /\.html?$/i.test(file.path) && paths.has(file.path) && file.path.toLowerCase().includes(filter.toLowerCase()));
     }
     return files.filter(file => editableExtensions.test(file.path) && file.path.toLowerCase().includes(filter.toLowerCase()));
   }, [files, filter, pageInventory, isVadixMode]);
@@ -589,7 +589,7 @@ export default function App() {
             <div className="toolbar-controls"><div className="viewport-switch"><button className={viewport === "desktop" ? "active" : ""} onClick={() => setViewport("desktop")} title="Desktop preview">▰</button><button className={viewport === "tablet" ? "active" : ""} onClick={() => setViewport("tablet")} title="Tablet preview">▯</button><button className={viewport === "mobile" ? "active" : ""} onClick={() => setViewport("mobile")} title="Mobile preview">▯</button></div><button className="button subtle small" onClick={() => { setShowLinks(true); frameRef.current?.contentWindow?.postMessage({ type: "ve-links" }, "*"); }} disabled={!previewSrc}>↗ Find links</button><button className="button subtle small" onClick={downloadHtml} disabled={!currentFile}>↓ Export</button></div>
           </div>
           <div className="canvas-area">
-            {previewSrc ? <div className={`preview-device ${viewport}`}><div className="preview-browser"><div className="browser-dots"><i/><i/><i/></div><div className="browser-url">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.domain || repo?.name) : (repo?.owner + "/" + repo?.name + "/" + currentFile?.path)}</div><span className="browser-lock">⌁</span></div><iframe ref={frameRef} title="Isolated website preview" className="preview-frame" sandbox="allow-scripts allow-forms allow-popups" srcDoc={previewSrc} /></div>
+            {previewSrc ? <div className={`preview-device ${viewport}`}><div className="preview-browser"><div className="browser-dots"><i/><i/><i/></div><div className="browser-url">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.domain || repo?.name) : (repo?.owner + "/" + repo?.name + "/" + currentFile?.path)}</div><span className="browser-lock">⌁</span></div><iframe ref={frameRef} title="Isolated website preview" className="preview-frame" sandbox="allow-scripts allow-forms allow-popups" srcDoc={previewSrc} onLoad={() => frameRef.current?.contentWindow?.postMessage({ type: "ve-meta" }, "*")} /></div>
               : currentFile ? <div className="source-editor-panel"><div className="source-editor-heading"><div><b>Source file editor</b><small>{currentFile.path} · {inferFramework(files)}</small></div><span className="element-badge">SOURCE MODE</span></div><p>HTML pages use visual preview. This file is editable as source; framework-aware JSX visual preview is a separate adapter still in progress.</p><textarea className="source-editor" spellCheck={false} value={currentFile.content} onChange={e => { setCurrentFile({ ...currentFile, content: e.target.value }); setDirty(true); }} /></div>
               : <div className="empty-canvas"><div className="empty-illustration"><div className="mock-window"><div className="mock-top"><i/><i/><i/></div><div className="mock-layout"><div/><div/><div/><div/></div></div><span className="mock-cursor">↖</span></div><h2>Make changes to the site you already have.</h2><p>Open an assigned website, choose any page, then click the existing element in the preview to edit it. Vadix changes the existing site; it does not generate a replacement layout.</p><button className="button primary" onClick={() => setShowConnect(true)}>{isVadixMode ? "Open assigned website" : "Connect a repository"}</button><div className="feature-pills"><span>✦ Content edits</span><span>▧ Section clone / remove</span><span>⌘ Git commits</span></div></div>}
           </div>
