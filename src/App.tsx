@@ -208,7 +208,7 @@ export default function App() {
       if (active) { setSiteLoading(false); setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not load Vadix site access." }); }
     });
     return () => { active = false; };
-  }, [user, isVadixMode]);
+  }, [user, isVadixMode, token]);
 
   async function openAssignedSite(siteId: string) {
     const site = assignedSites.find(item => item.id === siteId);
