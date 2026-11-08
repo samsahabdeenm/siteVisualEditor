@@ -108,7 +108,7 @@ export default function App() {
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [commitMessage, setCommitMessage] = useState("Update website with visual editor");
   const [stagedAssets, setStagedAssets] = useState<Array<{ path: string; contentBase64: string; previewUrl: string; mimeType: string; name: string }>>([]);
-  const [showConnect, setShowConnect] = useState(true);
+  const [showConnect, setShowConnect] = useState(false);
   const [assignedSites, setAssignedSites] = useState<Array<{ id: string; name: string; slug: string; domain: string; provider: GitProvider; repository_owner: string; repository_name: string; default_branch: string; project_root: string; sitemap_url?: string | null; role: "editor" | "viewer" }>>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>("");
   const [siteLoading, setSiteLoading] = useState(false);
@@ -203,6 +203,7 @@ export default function App() {
       setAssignedSites(mapped);
       if (mapped.length === 1) setSelectedSiteId(mapped[0].id);
       setSiteLoading(false);
+      if (mapped.length === 1 && token.trim()) void openAssignedSite(mapped[0].id);
     })().catch(error => {
       if (active) { setSiteLoading(false); setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not load Vadix site access." }); }
     });
@@ -521,9 +522,8 @@ export default function App() {
   async function authAction(mode: "signin" | "signup") {
     setAuthBusy(true);
     try {
-      const result = mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email: userEmail, password })
-        : await supabase.auth.signUp({ email: userEmail, password });
+      if (mode === "signup") throw new Error("Vadix accounts are provisioned by ZenVentora administration. Self-signup is disabled.");
+      const result = await supabase.auth.signInWithPassword({ email: userEmail, password });
       if (result.error) throw result.error;
       if (mode === "signup" && !result.data.session) setNotice({ kind: "info", text: "Account created. Check your email to confirm, then sign in." });
       else setNotice({ kind: "ok", text: mode === "signin" ? "Signed in. Drafts can now be saved." : "Account created and signed in." });
@@ -545,7 +545,7 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#" aria-label="Site Visual Editor home"><span className="brand-mark">SV</span><span>site<span className="brand-light">visual</span><small>GIT WORKSPACE</small></span></a>
-        <div className="topbar-center"><span className="status-dot" /> Existing website editor <span className="topbar-separator">/</span> <span className="muted">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.name || "Vadix workspace") : (repo ? `${repo.owner}/${repo.name}` : "No repository connected")}</span></div>
+        <div className="topbar-center"><span className="status-dot" /> Vadix Visual Editor <span className="topbar-separator">/</span> <span className="muted">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.name || "Assigned workspace") : (repo ? `${repo.owner}/${repo.name}` : "No repository connected")}</span></div>
         <div className="topbar-actions">
           {user ? <><span className="user-pill">{user.email}</span><button className="button subtle small" onClick={async () => { await supabase.auth.signOut(); setToken(""); setAccessibleRepos([]); }}>Sign out</button></> : <button className="button subtle small" onClick={() => document.getElementById("account-panel")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Database account</button>}
           <button className="button primary small" disabled={loading || !currentFile} onClick={saveToGit}>{loading ? "Working…" : "↥ Commit to Git"}</button>
@@ -554,7 +554,7 @@ export default function App() {
 
       <main className="workspace">
         <aside className="left-rail">
-          <div className="rail-heading"><span>PROJECT</span><button className="icon-button" title="Connect another repository" onClick={() => setShowConnect(!showConnect)}>＋</button></div>
+          <div className="rail-heading"><span>PROJECT</span>{!isVadixMode && <button className="icon-button" title="Connect another repository" onClick={() => setShowConnect(!showConnect)}>＋</button>}</div>
           {isVadixMode && user ? <section className="customer-site-panel" aria-label="Assigned websites">
             <div className="customer-mode-badge">VADIX · CUSTOMER WORKSPACE</div>
             <h3>Your website</h3>
@@ -591,7 +591,7 @@ export default function App() {
           <div className="canvas-area">
             {previewSrc ? <div className={`preview-device ${viewport}`}><div className="preview-browser"><div className="browser-dots"><i/><i/><i/></div><div className="browser-url">{isVadixMode ? (assignedSites.find(site => site.id === selectedSiteId)?.domain || repo?.name) : (repo?.owner + "/" + repo?.name + "/" + currentFile?.path)}</div><span className="browser-lock">⌁</span></div><iframe ref={frameRef} title="Isolated website preview" className="preview-frame" sandbox="allow-scripts allow-forms allow-popups" srcDoc={previewSrc} onLoad={() => frameRef.current?.contentWindow?.postMessage({ type: "ve-meta" }, "*")} /></div>
               : currentFile ? <div className="source-editor-panel"><div className="source-editor-heading"><div><b>Source file editor</b><small>{currentFile.path} · {inferFramework(files)}</small></div><span className="element-badge">SOURCE MODE</span></div><p>HTML pages use visual preview. This file is editable as source; framework-aware JSX visual preview is a separate adapter still in progress.</p><textarea className="source-editor" spellCheck={false} value={currentFile.content} onChange={e => { setCurrentFile({ ...currentFile, content: e.target.value }); setDirty(true); }} /></div>
-              : <div className="empty-canvas"><div className="empty-illustration"><div className="mock-window"><div className="mock-top"><i/><i/><i/></div><div className="mock-layout"><div/><div/><div/><div/></div></div><span className="mock-cursor">↖</span></div><h2>Make changes to the site you already have.</h2><p>Open an assigned website, choose any page, then click the existing element in the preview to edit it. Vadix changes the existing site; it does not generate a replacement layout.</p><button className="button primary" onClick={() => setShowConnect(true)}>{isVadixMode ? "Open assigned website" : "Connect a repository"}</button><div className="feature-pills"><span>✦ Content edits</span><span>▧ Section clone / remove</span><span>⌘ Git commits</span></div></div>}
+              : <div className="empty-canvas"><div className="empty-illustration"><div className="mock-window"><div className="mock-top"><i/><i/><i/></div><div className="mock-layout"><div/><div/><div/><div/></div></div><span className="mock-cursor">↖</span></div><h2>Make changes to the site you already have.</h2><p>Open an assigned website, choose any page, then click the existing element in the preview to edit it. Vadix changes the existing site; it does not generate a replacement layout.</p>{!isVadixMode && <button className="button primary" onClick={() => setShowConnect(true)}>Connect a repository</button>}<div className="feature-pills"><span>✦ Content edits</span><span>▧ Section clone / remove</span><span>⌘ Git commits</span></div></div>}
           </div>
           <div className="statusbar"><span className="status-ready"><i/> Preview sandbox</span><span>{repo ? inferFramework(files) : "Waiting for project"}</span><span>{currentFile ? currentFile.path : "No page selected"}</span><span className={dirty ? "changes-pending" : ""}>{dirty ? "● Unsaved changes" : "✓ No pending changes"}</span></div>
         </section>
@@ -612,7 +612,7 @@ export default function App() {
             <div className="panel-save"><button className="button primary full" disabled={loading || !currentFile || !user} onClick={saveDraft}>{loading ? "Saving…" : "▣ Save draft to database"}</button><small>{user ? "Saves a version snapshot to your private workspace." : "Sign in below to enable database drafts."}</small><button className="button subtle full" disabled={loading || !currentFile} onClick={saveToGit}>↥ Save changes to Git</button></div>
           </div>
           <div id="account-panel" className="account-panel"><div className="account-title"><span className="database-icon">▤</span><div><b>Database workspace</b><small>{user ? "Signed in" : "Sign in to save drafts"}</small></div></div>
-            {user ? <div className="account-signed"><span className="account-check">✓</span><span>Draft history is enabled for {user.email}.</span></div> : <><input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="Email address" autoComplete="email" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 6 characters)" autoComplete="current-password" /><div className="action-row"><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signin")}>Sign in</button><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signup")}>Create account</button></div></>}
+            {user ? <div className="account-signed"><span className="account-check">✓</span><span>Signed in. Vadix access is provisioned by ZenVentora.</span></div> : <><input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="Email address" autoComplete="email" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 6 characters)" autoComplete="current-password" /><div className="action-row"><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signin")}>Sign in</button></div></>}
           </div>
         </aside>
       </main>
