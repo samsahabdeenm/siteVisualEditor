@@ -112,6 +112,10 @@ export default function App() {
   const [assignedSites, setAssignedSites] = useState<Array<{ id: string; name: string; slug: string; domain: string; provider: GitProvider; repository_owner: string; repository_name: string; default_branch: string; project_root: string; sitemap_url?: string | null; role: "editor" | "viewer" }>>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>("");
   const [siteLoading, setSiteLoading] = useState(false);
+  const [setupSubmitted, setSetupSubmitted] = useState(false);
+  const [setupBusy, setSetupBusy] = useState(false);
+  const [setupForm, setSetupForm] = useState({ siteName: "", purpose: "", requirements: "", templateKey: "business" });
+  const [generatedRepoName, setGeneratedRepoName] = useState("");
   const [pageInventory, setPageInventory] = useState<Array<{ path: string; url: string; source: "sitemap" | "repository" }>>([]);
   const [meta, setMeta] = useState({ title: "", description: "", canonical: "", ogTitle: "", ogDescription: "", ogImage: "" });
   const productParam = new URLSearchParams(window.location.search).get("product")?.toLowerCase() || "";
@@ -209,6 +213,46 @@ export default function App() {
     });
     return () => { active = false; };
   }, [user, isVadixMode, token]);
+
+  function generateRepositoryName(siteName: string) {
+    const base = siteName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "website";
+    const random = Math.random().toString(36).slice(2, 8);
+    return `vadix-${base}-${random}`;
+  }
+
+  async function submitVadixSetup() {
+    if (!user) return setNotice({ kind: "error", text: "Please sign in first." });
+    if (!setupForm.siteName.trim() || !setupForm.purpose.trim()) {
+      return setNotice({ kind: "error", text: "Website name and purpose are required." });
+    }
+    setSetupBusy(true);
+    try {
+      const repoName = generatedRepoName || generateRepositoryName(setupForm.siteName);
+      const { error } = await supabase.from("vadix_onboarding_requests").insert({
+        user_id: user.id,
+        site_name: setupForm.siteName.trim(),
+        purpose: setupForm.purpose.trim(),
+        requirements: setupForm.requirements.trim() || null,
+        generated_repository_name: repoName,
+        template_key: setupForm.templateKey,
+        status: "pending"
+      });
+      if (error) throw error;
+      setGeneratedRepoName(repoName);
+      setSetupSubmitted(true);
+      setNotice({ kind: "ok", text: "Website setup saved. Your Vadix workspace is ready for repository provisioning." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not save website setup." });
+    } finally { setSetupBusy(false); }
+  }
+
+  const starterTemplates = [
+    { key: "business", name: "Business", description: "Clean company / service website", icon: "▦" },
+    { key: "ecommerce", name: "E-commerce", description: "Product and shopping focused", icon: "▤" },
+    { key: "real-estate", name: "Real Estate", description: "Property listings and enquiries", icon: "⌂" },
+    { key: "portfolio", name: "Portfolio", description: "Personal, agency or creative work", icon: "✦" },
+    { key: "landing", name: "Landing Page", description: "Single-page conversion focused", icon: "◈" }
+  ];
 
   async function openAssignedSite(siteId: string) {
     const site = assignedSites.find(item => item.id === siteId);
@@ -522,10 +566,23 @@ export default function App() {
   async function authAction(mode: "signin" | "signup") {
     setAuthBusy(true);
     try {
-      if (mode === "signup") throw new Error("Vadix accounts are provisioned by ZenVentora administration. Self-signup is disabled.");
-      const result = await supabase.auth.signInWithPassword({ email: userEmail, password });
-      if (result.error) throw result.error;
-      setNotice({ kind: "ok", text: "Signed in. Drafts can now be saved." });
+      if (mode === "signup") {
+        const result = await supabase.auth.signUp({
+          email: userEmail,
+          password,
+          options: { emailRedirectTo: window.location.origin + window.location.pathname + "?product=vadix" }
+        });
+        if (result.error) throw result.error;
+        if (result.data.session) {
+          setNotice({ kind: "ok", text: "Account created. Complete the website setup below." });
+        } else {
+          setNotice({ kind: "info", text: "Account created. Check your email to confirm your account, then sign in to continue setup." });
+        }
+      } else {
+        const result = await supabase.auth.signInWithPassword({ email: userEmail, password });
+        if (result.error) throw result.error;
+        setNotice({ kind: "ok", text: "Signed in. Drafts can now be saved." });
+      }
     } catch (error) {
       setNotice({ kind: "error", text: error instanceof Error ? error.message : "Authentication failed." });
     } finally { setAuthBusy(false); }
@@ -551,6 +608,35 @@ export default function App() {
         </div>
       </header>
 
+      {isVadixMode && user && !siteLoading && assignedSites.length === 0 && !setupSubmitted ? <main className="setup-shell">
+        <section className="setup-card">
+          <div className="setup-kicker">VADIX · WEBSITE SETUP</div>
+          <h1>Tell us what you want to build.</h1>
+          <p className="setup-intro">You don't need to choose a repository name. Vadix generates a unique internal repository name from your website details.</p>
+          <div className="setup-grid">
+            <div>
+              <label>Website / business name</label>
+              <input value={setupForm.siteName} onChange={e => { const value = e.target.value; setSetupForm({ ...setupForm, siteName: value }); setGeneratedRepoName(generateRepositoryName(value)); }} placeholder="Example: ABC Traders" />
+            </div>
+            <div>
+              <label>What is this website for?</label>
+              <input value={setupForm.purpose} onChange={e => setSetupForm({ ...setupForm, purpose: e.target.value })} placeholder="Example: Online store for our products" />
+            </div>
+          </div>
+          <label>What do you need on the website?</label>
+          <textarea rows={5} value={setupForm.requirements} onChange={e => setSetupForm({ ...setupForm, requirements: e.target.value })} placeholder="Pages, sections, products, contact forms, WhatsApp button, SEO, gallery, booking, etc." />
+          <div className="repo-preview">
+            <span>Generated repository</span>
+            <b>{generatedRepoName || "vadix-your-site-xxxxxx"}</b>
+            <small>Generated automatically. Customers never choose the repository name.</small>
+          </div>
+          <h3>Choose a starter design</h3>
+          <p className="helper">If you already have website files, you can upload them instead. Otherwise choose one of these responsive starter templates.</p>
+          <div className="template-grid">{starterTemplates.map(template => <button key={template.key} className={setupForm.templateKey === template.key ? "template-card selected" : "template-card"} onClick={() => setSetupForm({ ...setupForm, templateKey: template.key })}><span className="template-icon">{template.icon}</span><b>{template.name}</b><small>{template.description}</small></button>)}</div>
+          <div className="setup-actions"><button className="button subtle" onClick={() => setNotice({ kind: "info", text: "Upload existing HTML/CSS/JS or ZIP files can be added from the provisioning step." })}>I already have website files</button><button className="button primary" disabled={setupBusy} onClick={() => void submitVadixSetup()}>{setupBusy ? "Saving setup…" : "Continue with Vadix →"}</button></div>
+          <div className="setup-help">Need a custom setup? Contact <b>sales@zenventora.in</b> or <b>+91 93607 82707</b>.</div>
+        </section>
+      </main> : setupSubmitted ? <main className="setup-shell"><section className="setup-card setup-success"><div className="setup-kicker">SETUP RECEIVED</div><h1>Your website workspace is being prepared.</h1><p>Repository: <b>{generatedRepoName}</b></p><p>Once the repository is provisioned, your assigned site will appear here with its pages and visual editor.</p><div className="setup-next"><span>1</span> Repository created / files uploaded<br/><span>2</span> Pages and sitemap discovered<br/><span>3</span> Visual editing workspace enabled</div><p className="helper">If your existing files conflict or cannot be mapped cleanly, ZenVentora development will review it.</p><div className="setup-help">Development: <b>sales@zenventora.in</b> · <b>+91 93607 82707</b></div></section></main> : null}
       <main className="workspace">
         <aside className="left-rail">
           <div className="rail-heading"><span>PROJECT</span>{!isVadixMode && <button className="icon-button" title="Connect another repository" onClick={() => setShowConnect(!showConnect)}>＋</button>}</div>
@@ -611,7 +697,7 @@ export default function App() {
             <div className="panel-save"><button className="button primary full" disabled={loading || !currentFile || !user} onClick={saveDraft}>{loading ? "Saving…" : "▣ Save draft to database"}</button><small>{user ? "Saves a version snapshot to your private workspace." : "Sign in below to enable database drafts."}</small><button className="button subtle full" disabled={loading || !currentFile} onClick={saveToGit}>↥ Save changes to Git</button></div>
           </div>
           <div id="account-panel" className="account-panel"><div className="account-title"><span className="database-icon">▤</span><div><b>Database workspace</b><small>{user ? "Signed in" : "Sign in to save drafts"}</small></div></div>
-            {user ? <div className="account-signed"><span className="account-check">✓</span><span>Signed in. Vadix access is provisioned by ZenVentora.</span></div> : <><input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="Email address" autoComplete="email" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 6 characters)" autoComplete="current-password" /><div className="action-row"><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signin")}>Sign in</button></div></>}
+            {user ? <div className="account-signed"><span className="account-check">✓</span><span>Signed in. Vadix access is provisioned by ZenVentora.</span></div> : <><input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="Email address" autoComplete="email" /><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 6 characters)" autoComplete="current-password" /><div className="action-row"><button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signin")}>Sign in</button><button className="button primary" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signup")}>Create account</button></div><small className="helper">New customers create an account first, then Vadix collects the website setup details. Existing ZenVentora-provisioned accounts can sign in directly.</small></>}
           </div>
         </aside>
       </main>
