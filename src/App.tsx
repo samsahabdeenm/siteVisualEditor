@@ -525,8 +525,7 @@ export default function App() {
       if (mode === "signup") throw new Error("Vadix accounts are provisioned by ZenVentora administration. Self-signup is disabled.");
       const result = await supabase.auth.signInWithPassword({ email: userEmail, password });
       if (result.error) throw result.error;
-      if (mode === "signup" && !result.data.session) setNotice({ kind: "info", text: "Account created. Check your email to confirm, then sign in." });
-      else setNotice({ kind: "ok", text: mode === "signin" ? "Signed in. Drafts can now be saved." : "Account created and signed in." });
+      setNotice({ kind: "ok", text: "Signed in. Drafts can now be saved." });
     } catch (error) {
       setNotice({ kind: "error", text: error instanceof Error ? error.message : "Authentication failed." });
     } finally { setAuthBusy(false); }
