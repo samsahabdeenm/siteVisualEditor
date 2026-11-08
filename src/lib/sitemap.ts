@@ -61,3 +61,28 @@ export function repositoryPages(files: Array<{ path: string }>): DiscoveredPage[
     .map(file => ({ url: file.path, path: "/" + file.path.replace(/^\/+/, ""), source: "repository" as const }))
     .sort((a, b) => a.path.localeCompare(b.path));
 }
+
+
+export function mapSitemapToRepositoryPages(sitemapPages: DiscoveredPage[], files: Array<{ path: string }>): DiscoveredPage[] {
+  const htmlFiles = files.filter(file => /\.html?$/i.test(file.path) && !/(^|\/)backup(\/|$)/i.test(file.path));
+  const normalized = (value: string) => value.replace(/^\/+|\/+$/g, "").toLowerCase();
+  const matches = new Map<string, string>();
+  for (const file of htmlFiles) {
+    const noExt = file.path.replace(/\.html?$/i, "");
+    const variants = [
+      "/" + normalized(file.path),
+      "/" + normalized(noExt),
+      "/" + normalized(noExt.replace(/\/index$/i, "")),
+      "/" + normalized(noExt) + "/"
+    ];
+    for (const variant of variants) matches.set(variant || "/", file.path);
+  }
+  matches.set("/", htmlFiles.find(file => /^index\.html?$/i.test(file.path))?.path || htmlFiles.find(file => /(^|\/)index\.html?$/i.test(file.path))?.path || "");
+  return sitemapPages
+    .map(page => {
+      const key = page.path === "/" ? "/" : "/" + normalized(page.path);
+      const repoPath = matches.get(key) || matches.get(key.endsWith("/") ? key.slice(0, -1) : key + "/");
+      return repoPath ? { ...page, path: "/" + repoPath.replace(/^\/+/, "") } : null;
+    })
+    .filter((page): page is DiscoveredPage => Boolean(page));
+}
