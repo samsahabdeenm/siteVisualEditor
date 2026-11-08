@@ -17,7 +17,7 @@ function normalizeUrl(value: string, origin: string) {
 
 function sitemapLocations(xml: string, origin: string) {
   const locations: string[] = [];
-  const re = /<loc>\\s*([^<]+?)\\s*<\\/loc>/gi;
+  const re = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(xml))) {
     const normalized = normalizeUrl(match[1], origin);
@@ -38,7 +38,7 @@ export async function discoverSitemapPages(domain: string, explicitSitemap?: str
     const response = await fetch(url, { headers: { Accept: "application/xml,text/xml,text/plain" } });
     if (!response.ok) throw new Error("Sitemap request failed: " + response.status);
     const xml = await response.text();
-    const isIndex = /<sitemapindex[\\s>]/i.test(xml);
+    const isIndex = /<sitemapindex[\s>]/i.test(xml);
     const locations = sitemapLocations(xml, base.origin);
     if (isIndex) {
       for (const location of locations) await visit(location, depth + 1);
@@ -57,7 +57,7 @@ export async function discoverSitemapPages(domain: string, explicitSitemap?: str
 
 export function repositoryPages(files: Array<{ path: string }>): DiscoveredPage[] {
   return files
-    .filter(file => /\\.html?$/i.test(file.path) && !/(^|\\/)backup(\\/|$)/i.test(file.path))
-    .map(file => ({ url: file.path, path: "/" + file.path.replace(/^\\/+/, ""), source: "repository" as const }))
+    .filter(file => /\.html?$/i.test(file.path) && !/(^|\/)backup(\/|$)/i.test(file.path))
+    .map(file => ({ url: file.path, path: "/" + file.path.replace(/^\/+/, ""), source: "repository" as const }))
     .sort((a, b) => a.path.localeCompare(b.path));
 }
