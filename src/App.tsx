@@ -119,7 +119,7 @@ export default function App() {
   const [pageInventory, setPageInventory] = useState<Array<{ path: string; url: string; source: "sitemap" | "repository" }>>([]);
   const [meta, setMeta] = useState({ title: "", description: "", canonical: "", ogTitle: "", ogDescription: "", ogImage: "" });
   const productParam = new URLSearchParams(window.location.search).get("product")?.toLowerCase() || "";
-  const isVadixMode = productParam === "vadix" || window.location.pathname.toLowerCase().includes("/vadix");
+  const isVadixMode = productParam === "vadix" || window.location.pathname.toLowerCase().includes("/vadix") || window.location.hostname.toLowerCase().includes("vadix-visual-editor-admin");
   const frameRef = useRef<HTMLIFrameElement>(null);
   const htmlResultResolve = useRef<((html: string) => void) | null>(null);
 
@@ -595,6 +595,34 @@ export default function App() {
       const url = URL.createObjectURL(new Blob([value], { type: "text/html;charset=utf-8" }));
       const anchor = document.createElement("a"); anchor.href = url; anchor.download = currentFile.path.split("/").pop() || "page.html"; anchor.click(); URL.revokeObjectURL(url);
     }).catch(error => setNotice({ kind: "error", text: error.message }));
+  }
+
+  if (isVadixMode && !user) {
+    return (
+      <div className="app-shell">
+        <header className="topbar">
+          <a className="brand" href="#" aria-label="Vadix home"><span className="brand-mark">VX</span><span>Vadix<small>VISUAL WEBSITE EDITOR</small></span></a>
+          <div className="topbar-center"><span className="status-dot" /> Vadix <span className="topbar-separator">/</span> <span className="muted">Secure customer login</span></div>
+        </header>
+        <main className="setup-shell">
+          <section className="setup-card" style={{ maxWidth: 520 }}>
+            <div className="setup-kicker">VADIX · CUSTOMER LOGIN</div>
+            <h1>Sign in to manage your website.</h1>
+            <p className="setup-intro">Use the username and password provided for your Vadix account. New customers can create an account first and then complete the website setup.</p>
+            <label htmlFor="vadix-login-email">Username / Email</label>
+            <input id="vadix-login-email" type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="you@example.com" autoComplete="username" />
+            <label htmlFor="vadix-login-password">Password</label>
+            <input id="vadix-login-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" autoComplete="current-password" />
+            <div className="action-row" style={{ marginTop: 18 }}>
+              <button className="button primary" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signin")}>{authBusy ? "Signing in…" : "Sign in"}</button>
+              <button className="button subtle" disabled={authBusy || !userEmail || password.length < 6} onClick={() => authAction("signup")}>Create account</button>
+            </div>
+            <p className="helper" style={{ marginTop: 16 }}>After sign-in, existing assigned customers go to their website. A new customer goes to Website Setup → file upload or starter template → repository provisioning → visual editor.</p>
+          </section>
+        </main>
+        {notice && <div className={`toast ${notice.kind}`} role="status"><span>{notice.kind === "ok" ? "✓" : notice.kind === "error" ? "!" : "i"}</span>{notice.text}<button onClick={() => setNotice(null)} aria-label="Dismiss message">×</button></div>}
+      </div>
+    );
   }
 
   return (
